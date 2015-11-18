@@ -146,9 +146,9 @@ class MainWindow(urwid.WidgetWrap):
         self.cpu_widget.set_data(cpu_percent)
         self.process_widget.set_data(process_cpu)
         self.heap_widget.set_data(heap_percent)
-        self.heap_widget.update_title(sum(heap_total)/math.pow(1024.0,3))
+        self.heap_widget.update_title(sum(heap_total)/math.pow(1024.0,3), unit='gb')
         self.memory_widget.set_data(memory_percent)
-        self.memory_widget.update_title(sum(memory_total)/math.pow(1024.0,3))
+        self.memory_widget.update_title(sum(memory_total)/math.pow(1024.0,3), unit='gb')
         self.t_load.set_text('Load: {0:.2f}/{1:.2f}/{2:.2f}'.format(*load))
 
     def update_header(self, info=None):
