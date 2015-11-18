@@ -21,28 +21,49 @@
 
 import urwid
 
-
 class HorizontalBar(urwid.Text):
 
-    STA = '*'
-    EQU = '='
-    PIP = '|'
+    START = b'['
+    END = b']'
 
-    def __init__(self, percent=0.0, symbol=PIP):
+    STAR = b'*'
+    EQUI = b'='
+    PIPE = b'|'
+
+    def __init__(self, current=0.0, total=100.0, symbol=PIPE):
         self.symbol = symbol
-        bar = symbol * int(percent)
-        super(HorizontalBar, self).__init__(bar)
+        self.set_progress(current, total)
+        super(HorizontalBar, self).__init__('')
 
-    def set_percent(self, percent):
-        self.set_text([('default', self.symbol * int(percent))])
+    def set_progress(self, current=0.0, total=100.0):
+        self.progress = current / total
+        self._invalidate()
 
+    def color(self):
+        if self.progress < 0.7:
+            return 'text_green'
+        elif self.progress < 0.9:
+            return 'text_yellow'
+        return 'text_red'
+
+    def rows(self, size, focus=False):
+        return 1
+
+    def render(self, size, focus=False):
+        (maxcol, ) = size
+        chars = float(maxcol - 2) * self.progress
+        bar = self.symbol * int(chars)
+        space = b' ' * (maxcol - int(chars) - 2)
+        return urwid.TextCanvas([self.START + bar + space + self.END],
+                                attr=[[('default', 1), (self.color(), maxcol-2), ('default', 1)]],
+                                maxcol=maxcol)
 
 class HorizontalGraphWidget(urwid.Pile):
 
     def __init__(self, title, percent=0.0):
         self._title = title
-        self.title = urwid.Text([title])
-        self.bar = urwid.ProgressBar('progress_bg', 'green', percent)
+        self.title = urwid.Text(title)
+        self.bar = HorizontalBar(percent)
         self.details = urwid.Pile([])
         widgets = [
             self.title,
@@ -52,16 +73,14 @@ class HorizontalGraphWidget(urwid.Pile):
         self._last_value = []
         super(HorizontalGraphWidget, self).__init__(widgets)
 
-    def _new_bar(self, value=0.0):
-        return urwid.ProgressBar('progress_bg', 'progress_fg', value)
-
     def toggle_details(self):
         if len(self.details.contents):
             self.details.contents = []
         else:
             bars = []
             for value in self._last_value:
-                bars.append((self._new_bar(value), ('pack', None)))
+                bar = HorizontalBar(value)
+                bars.append((bar, ('pack', None)))
             self.details.contents = bars
 
     def update_title(self, total=0.0, unit='mb'):
@@ -73,9 +92,9 @@ class HorizontalGraphWidget(urwid.Pile):
 
     def set_data(self, values=[]):
         self._last_value = values
-        self.bar.set_completion(sum(values) / len(values))
+        self.bar.set_progress(sum(values) / len(values))
         num = len(self.details.contents)
         if num:
             for idx in range(num):
-                self.details.contents[idx][0].set_completion(values[idx])
+                self.details.contents[idx][0].set_progress(values[idx])
 

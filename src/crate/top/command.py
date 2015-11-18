@@ -80,15 +80,14 @@ class GraphModel(object):
 class MainWindow(urwid.WidgetWrap):
 
     PALETTE = [
-        ('inverted', 'black', 'white'),
-        ('green', 'black', 'dark green'),
-        ('yellow', 'black', 'yellow'),
-        ('red', 'white', 'dark red'),
+        ('inverted', 'black, bold', 'white'),
+        ('headline', 'default, bold', 'default'),
+        ('health_green', 'black', 'dark green'),
+        ('health_yellow', 'black', 'yellow'),
+        ('health_red', 'white', 'dark red'),
         ('text_green', 'dark green', 'default'),
         ('text_yellow', 'yellow', 'default'),
         ('text_red', 'dark red', 'default'),
-        ('progress_bg', 'white', 'dark gray'),
-        ('progress_fg', 'black', 'yellow'),
     ]
 
     def __init__(self, controller):
@@ -96,20 +95,33 @@ class MainWindow(urwid.WidgetWrap):
         self.frame = self.layout()
         super(MainWindow, self).__init__(self.frame)
 
+    def _title(self, text, hotkey=None):
+        text = [('headline', text)]
+        if not (hotkey == None):
+            text[0:0] = [('default', '({0})'.format(hotkey)), ' ']
+        return text
+
     def layout(self):
-        self.cpu_widget = HorizontalGraphWidget('[1] CPU Usage', 0.0)
-        self.process_widget = HorizontalGraphWidget('[2] Crate CPU Usage', 0.0)
-        self.memory_widget = HorizontalGraphWidget('[3] Memory Usage', 0.0)
-        self.heap_widget = HorizontalGraphWidget('[4] Heap Usage', 0.0)
+        self.cpu_widget = HorizontalGraphWidget(self._title('CPU Usage', '1'))
+        self.process_widget = HorizontalGraphWidget(self._title('Crate CPU Usage', '2'))
+        self.memory_widget = HorizontalGraphWidget(self._title('Memory Usage', '3'))
+        self.heap_widget = HorizontalGraphWidget(self._title('Heap Usage', '4'))
         self.debug = urwid.Text('')
-        self.body = urwid.Pile([
-            urwid.Divider(),
-            self.cpu_widget,
-            self.process_widget,
-            self.memory_widget,
-            self.heap_widget,
-            urwid.Divider(),
-        ])
+        self.body = urwid.Columns([
+            urwid.Pile([
+                urwid.Divider(),
+                self.cpu_widget,
+                self.process_widget,
+                self.memory_widget,
+                self.heap_widget,
+                urwid.Divider(),
+            ]),
+            urwid.Pile([
+                urwid.Divider(),
+                urwid.Text(self._title('Cluster Info')),
+                urwid.Divider(),
+            ]),
+        ], dividechars=3)
         self.t_cluster_name = urwid.Text(b'-', align='center')
         self.t_version = urwid.Text(b'-', align='center')
         self.t_load = urwid.Text(b'-/-/-', align='right')
