@@ -1,4 +1,5 @@
 # -*- coding: utf-8; -*-
+# vi: set encoding=utf-8
 #
 # Licensed to CRATE Technology GmbH ("Crate") under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
@@ -28,8 +29,13 @@ import urwid
 import urllib3
 import argparse
 from colorama import Fore, Back, Style
+from urllib3.exceptions import MaxRetryError
 from crate.client import connect
+from .logging import ColorLog
 from .widgets import HorizontalGraphWidget
+
+
+LOGGER = ColorLog(__name__)
 
 
 class GraphModel(object):
@@ -189,12 +195,15 @@ class CrateTop(object):
         self.model = GraphModel(hosts)
         self.view = MainWindow(self)
         self.view.update_footer(hosts)
+        self.loop = None
+        self.exit_message = None
 
     def __call__(self):
+        if not self.fetch_initial():
+            return self.quit('Could not connect to {0}'.format(self.model.hosts))
         self.loop = urwid.MainLoop(self.view,
                                    self.view.PALETTE,
                                    unhandled_input=self.handle_input)
-        self.loop.set_alarm_in(0.1, self.fetch_initial)
         self.loop.set_alarm_in(0.1, self.fetch)
         self.loop.run()
 
@@ -202,13 +211,22 @@ class CrateTop(object):
         return self
 
     def __exit__(self, ex, msg, trace):
-        msg = 'Thanks for using CrateTop!\n' \
-              'Please send feedback to christian.haudum@crate.io'
-        print(Fore.YELLOW + msg + Style.RESET_ALL)
+        if self.exit_message:
+            LOGGER.error(self.exit_message)
+        else:
+            msg = 'Thanks for using CrateTop!\n' \
+                  'Please send feedback to christian.haudum@crate.io'
+            print(msg, file=sys.stderr)
+
+    def quit(self, msg=None):
+        self.exit_message = msg
+        if self.loop:
+            raise urwid.ExitMainLoop()
+        return 1
 
     def handle_input(self, key):
         if key in ('q', 'Q'):
-            raise urwid.ExitMainLoop()
+            self.quit()
         elif key == '1':
             self.view.cpu_widget.toggle_details()
         elif key == '2':
@@ -218,15 +236,19 @@ class CrateTop(object):
         elif key == '4':
             self.view.heap_widget.toggle_details()
 
-    def fetch_initial(self, loop, args):
-        info = self.model.cluster_info()
-        self.view.update_header(info)
+    def fetch_initial(self):
+        try:
+            info = self.model.cluster_info()
+            self.view.update_header(info)
+        except MaxRetryError as e:
+            return False
+        return True
 
     def fetch(self, loop, args):
         try:
             data = self.model.refresh()
         except Exception as e:
-            pass
+            self.quit(e)
         else:
             self.view.update(data)
         loop.set_alarm_in(self.REFRESH_INTERVAL, self.fetch)
