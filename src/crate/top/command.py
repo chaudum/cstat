@@ -28,7 +28,6 @@ import math
 import urwid
 import urllib3
 import argparse
-from colorama import Fore, Back, Style
 from urllib3.exceptions import MaxRetryError
 from crate.client import connect
 from .logging import ColorLog
@@ -43,14 +42,11 @@ class GraphModel(object):
     QUERY = """SELECT id,
                       name,
                       hostname,
-                      os['cpu'] as cpu_usage,
-                      process['cpu']['percent'] as process_cpu,
+                      os['cpu'] as cpu,
+                      process['cpu'] as process,
                       load,
-                      load['1'] / os_info['available_processors'] as load_rel,
-                      heap['max'] as heap,
-                      heap['used'] * 100.0 / heap['max'] as heap_usage,
-                      mem['free'] + mem['used'] as memory,
-                      mem['used'] * 100.0 / (mem['free'] + mem['used']) as memory_usage
+                      heap,
+                      mem
                FROM sys.nodes
                ORDER BY name"""
 
@@ -125,6 +121,7 @@ class MainWindow(urwid.WidgetWrap):
             urwid.Pile([
                 urwid.Divider(),
                 urwid.Text(self._title('Cluster Info')),
+                #self.debug,
                 urwid.Divider(),
             ]),
         ], dividechars=3)
@@ -143,36 +140,30 @@ class MainWindow(urwid.WidgetWrap):
                            footer=urwid.Columns([self.t_hosts]))
 
     def update(self, data):
-        cpu_percent = []
-        process_cpu = []
-        heap_percent = []
-        heap_total = []
-        memory_percent = []
-        memory_total = []
+        cpu = []
+        process = []
+        heap = []
+        memory = []
         load = [0.0, 0.0, 0.0]
         num = float(len(data))
         for node in data:
-            self.debug.set_text([('red', json.dumps(node))])
-            cpu_percent.append(node['cpu_usage']['used'])
-            process_cpu.append(node['process_cpu'])
-            heap_percent.append(node['heap_usage'])
-            heap_total.append(node['heap'])
-            memory_percent.append(node['memory_usage'])
-            memory_total.append(node['memory'])
+            cpu.append([node['cpu']['used'], node['cpu']['used']+node['cpu']['idle']])
+            process.append([node['process']['percent'], 100.0])
+            heap.append([node['heap']['used'], node['heap']['max']])
+            memory.append([node['mem']['used'], node['mem']['free']+node['mem']['used']])
             for idx, k in enumerate(['1', '5', '15']):
                 load[idx] += node['load'][k] / num
-        self.cpu_widget.set_data(cpu_percent)
-        self.process_widget.set_data(process_cpu)
-        self.heap_widget.set_data(heap_percent)
-        self.heap_widget.update_title(sum(heap_total)/math.pow(1024.0,3), unit='gb')
-        self.memory_widget.set_data(memory_percent)
-        self.memory_widget.update_title(sum(memory_total)/math.pow(1024.0,3), unit='gb')
+        self.memory_widget.set_data(memory)
+        self.heap_widget.set_data(heap)
+        self.cpu_widget.set_data(cpu)
+        self.process_widget.set_data(process)
         self.t_load.set_text('Load: {0:.2f}/{1:.2f}/{2:.2f}'.format(*load))
+        self.debug.set_text([('text_red', json.dumps([d['hostname'] for d in data]))])
 
     def update_header(self, info=None):
         if info is None:
-            self.t_cluster_name.set_text(["Cluster Name: ", ('red', '---')])
-            self.t_version.set_text(["Version: ", ('red', '---')])
+            self.t_cluster_name.set_text(["Cluster Name: ", ('text_red', '---')])
+            self.t_version.set_text(["Version: ", ('text_red', '---')])
         else:
             self.t_cluster_name.set_text([
                 "Cluster Name: ",
@@ -254,10 +245,12 @@ class CrateTop(object):
         loop.set_alarm_in(self.REFRESH_INTERVAL, self.fetch)
 
 
-def splitter(input):
-    return input.split(',')
-
 def parse_cli():
+    """
+    Parse command line arguments
+    """
+    def splitter(input):
+        return input.split(',')
     parser = argparse.ArgumentParser('CrateTop')
     parser.add_argument('--hosts', '--crate-hosts',
                         help='Comma separated list of Crate hosts to connect to.',

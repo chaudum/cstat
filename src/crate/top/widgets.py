@@ -41,9 +41,9 @@ class HorizontalBar(urwid.Text):
         self._invalidate()
 
     def color(self):
-        if self.progress < 0.7:
+        if self.progress < 0.8:
             return 'text_green'
-        elif self.progress < 0.9:
+        elif self.progress < 0.95:
             return 'text_yellow'
         return 'text_red'
 
@@ -55,8 +55,9 @@ class HorizontalBar(urwid.Text):
         chars = float(maxcol - 2) * self.progress
         bar = self.symbol * int(chars)
         space = b' ' * (maxcol - int(chars) - 2)
+        line_attr = [('default', 1), (self.color(), maxcol-2), ('default', 1)]
         return urwid.TextCanvas([self.START + bar + space + self.END],
-                                attr=[[('default', 1), (self.color(), maxcol-2), ('default', 1)]],
+                                attr=[line_attr,],
                                 maxcol=maxcol)
 
 class HorizontalGraphWidget(urwid.Pile):
@@ -80,22 +81,23 @@ class HorizontalGraphWidget(urwid.Pile):
         else:
             bars = []
             for value in self._last_value:
-                bar = HorizontalBar(value)
+                bar = HorizontalBar(*value)
                 bars.append((bar, ('pack', None)))
             self.details.contents = bars
 
-    def update_title(self, total=0.0, unit='mb'):
-        self.title.set_text([
-            self._title,
-            ' ',
-            '({0:.2f}{1})'.format(total, unit)
-        ])
+    def sum(self, values=[]):
+        return (sum([x[0] for x in values]), sum([x[1] for x in values]))
 
     def set_data(self, values=[]):
         self._last_value = values
-        self.bar.set_progress(sum(values) / len(values))
+        self.bar.set_progress(*self.sum(values))
         num = len(self.details.contents)
-        if num:
-            for idx in range(num):
-                self.details.contents[idx][0].set_progress(values[idx])
+        if num == 0:
+            return
+        for idx in range(num):
+            bar = self.details.contents[idx]
+            if idx < len(values):
+                bar[0].set_progress(*values[idx])
+            else:
+                self.details.contents.remove(bar)
 
