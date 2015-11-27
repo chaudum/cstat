@@ -29,6 +29,7 @@ import urwid
 import urllib3
 import argparse
 import traceback
+from collections import namedtuple
 from urllib3.exceptions import MaxRetryError
 from crate.client import connect
 from .logging import ColorLog
@@ -59,17 +60,11 @@ class GraphModel(object):
 
     def sql(self, query, args=[]):
         self.cursor.execute(query, args)
-        return (self.cursor.fetchall(), [c[0] for c in self.cursor.description])
+        Row = namedtuple('Row', [c[0] for c in self.cursor.description])
+        return [Row(*r) for r in self.cursor.fetchall()]
 
     def refresh(self):
-        rows, cols = self.sql(self.QUERY)
-        return self.preprocess(rows, cols)
-
-    def preprocess(self, rows=[], cols=[]):
-        data = []
-        for row in rows:
-            data.append(dict(list(zip(cols, row))))
-        return data
+        return self.sql(self.QUERY)
 
     def cluster_info(self):
         if not self._cluster_info:
@@ -109,7 +104,6 @@ class MainWindow(urwid.WidgetWrap):
         self.process_widget = HorizontalGraphWidget(self._title('Crate CPU Usage', '2'))
         self.memory_widget = HorizontalGraphWidget(self._title('Memory Usage', '3'))
         self.heap_widget = HorizontalGraphWidget(self._title('Heap Usage', '4'))
-        self.debug = urwid.Text('')
         self.body = urwid.Columns([
             urwid.Pile([
                 urwid.Divider(),
@@ -122,7 +116,6 @@ class MainWindow(urwid.WidgetWrap):
             urwid.Pile([
                 urwid.Divider(),
                 urwid.Text(self._title('Cluster Info')),
-                #self.debug,
                 urwid.Divider(),
             ]),
         ], dividechars=3)
@@ -148,18 +141,17 @@ class MainWindow(urwid.WidgetWrap):
         load = [0.0, 0.0, 0.0]
         num = float(len(data))
         for node in data:
-            cpu.append([node['cpu']['used'], node['cpu']['used']+node['cpu']['idle']])
-            process.append([node['process']['percent'], 100.0])
-            heap.append([node['heap']['used'], node['heap']['max']])
-            memory.append([node['mem']['used'], node['mem']['free']+node['mem']['used']])
+            cpu.append([node.cpu['used'], node.cpu['used']+node.cpu['idle']])
+            process.append([node.process['percent'], 100.0])
+            heap.append([node.heap['used'], node.heap['max']])
+            memory.append([node.mem['used'], node.mem['free']+node.mem['used']])
             for idx, k in enumerate(['1', '5', '15']):
-                load[idx] += node['load'][k] / num
+                load[idx] += node.load[k] / num
         self.memory_widget.set_data(memory)
         self.heap_widget.set_data(heap)
         self.cpu_widget.set_data(cpu)
         self.process_widget.set_data(process)
         self.t_load.set_text('Load: {0:.2f}/{1:.2f}/{2:.2f}'.format(*load))
-        self.debug.set_text([('text_red', json.dumps([d['hostname'] for d in data]))])
 
     def update_header(self, info=None):
         if info is None:
