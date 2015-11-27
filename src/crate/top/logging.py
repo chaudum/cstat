@@ -20,7 +20,9 @@
 # with Crate these terms will supersede the license and you may use the
 # software solely pursuant to the terms of the relevant commercial agreement.
 
-import sys
+from __future__ import print_function
+
+from datetime import datetime
 from colorama import Fore, Style
 
 
@@ -28,19 +30,21 @@ class ColorLog(object):
 
     def __init__(self, name):
         self.name = name
+        self.stream = open('ctop.log', 'a')
 
     def _print(self, color, level, *args):
-        msg = '[{1:<6} {0}] {2}'.format(self.name,
-                                       level,
-                                       ' '.join([str(x) for x in args]))
-        print(color + msg + Style.RESET_ALL, file=sys.stderr)
+        msg = '[{1} {5} {0:<20}] {3}{2}{4}'.format(self.name, level,
+            ' '.join([str(x) for x in args]), color, Style.RESET_ALL,
+            datetime.now().isoformat())
+        print(msg, file=self.stream)
+        self.stream.flush()
 
     def info(self, *args):
-        self._print(Fore.GREEN, 'INFO', *args)
+        self._print(Fore.GREEN, 'I', *args)
 
     def warn(self, *args):
-        self._print(Fore.YELLOW, 'WARN', *args)
+        self._print(Fore.YELLOW, 'W', *args)
 
     def error(self, *args):
-        self._print(Fore.RED, 'ERROR', *args)
+        self._print(Fore.RED, 'E', *args)
 
