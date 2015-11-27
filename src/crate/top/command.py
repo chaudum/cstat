@@ -28,6 +28,7 @@ import math
 import urwid
 import urllib3
 import argparse
+import traceback
 from urllib3.exceptions import MaxRetryError
 from crate.client import connect
 from .logging import ColorLog
@@ -204,6 +205,10 @@ class CrateTop(object):
     def __exit__(self, ex, msg, trace):
         if self.exit_message:
             LOGGER.error(self.exit_message)
+        elif ex:
+            LOGGER.error(ex.__name__)
+            for line in traceback.format_tb(trace):
+                LOGGER.error(line.strip('\n'))
         else:
             msg = 'Thanks for using CrateTop!\n' \
                   'Please send feedback to christian.haudum@crate.io'
