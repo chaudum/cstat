@@ -52,9 +52,9 @@ class HorizontalBar(urwid.Text):
 
     def render(self, size, focus=False):
         (maxcol, ) = size
-        chars = float(maxcol - 2) * self.progress
-        bar = self.symbol * int(chars)
-        space = b' ' * (maxcol - int(chars) - 2)
+        chars = round(float(maxcol - 2) * self.progress)
+        bar = self.symbol * chars
+        space = b' ' * (maxcol - chars - 2)
         line_attr = [('default', 1), (self.color(), maxcol-2), ('default', 1)]
         return urwid.TextCanvas([self.START + bar + space + self.END],
                                 attr=[line_attr,],

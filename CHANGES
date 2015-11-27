@@ -1,0 +1,9 @@
+CHANGES
+=======
+
+Unreleased
+----------
+
+* fixed bug in bar graph widget that tried to print more characters than
+  allowed per line causing ctop to crash
+
