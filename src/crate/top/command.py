@@ -46,6 +46,7 @@ class GraphModel(object):
                       hostname,
                       os['cpu'] as cpu,
                       process['cpu'] as process,
+                      os_info['available_processors'] as cpus,
                       load,
                       heap,
                       mem
@@ -142,7 +143,7 @@ class MainWindow(urwid.WidgetWrap):
         num = float(len(data))
         for node in data:
             cpu.append([node.cpu['used'], node.cpu['used']+node.cpu['idle']])
-            process.append([node.process['percent'], 100.0])
+            process.append([node.process['percent'], 100.0*node.cpus])
             heap.append([node.heap['used'], node.heap['max']])
             memory.append([node.mem['used'], node.mem['free']+node.mem['used']])
             for idx, k in enumerate(['1', '5', '15']):
