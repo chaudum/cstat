@@ -171,6 +171,15 @@ class MainWindow(urwid.WidgetWrap):
     def update_footer(self, hosts):
         self.t_hosts.set_text(['Connected to: ', ('inverted', ' '.join(hosts))])
 
+    def handle_input(self, key):
+        if key == '1':
+            self.cpu_widget.toggle_details()
+        elif key == '2':
+            self.process_widget.toggle_details()
+        elif key == '3':
+            self.memory_widget.toggle_details()
+        elif key == '4':
+            self.heap_widget.toggle_details()
 
 class CrateTop(object):
 
@@ -216,14 +225,8 @@ class CrateTop(object):
     def handle_input(self, key):
         if key in ('q', 'Q'):
             self.quit()
-        elif key == '1':
-            self.view.cpu_widget.toggle_details()
-        elif key == '2':
-            self.view.process_widget.toggle_details()
-        elif key == '3':
-            self.view.memory_widget.toggle_details()
-        elif key == '4':
-            self.view.heap_widget.toggle_details()
+        else:
+            self.view.handle_input(key)
 
     def fetch_initial(self):
         try:
