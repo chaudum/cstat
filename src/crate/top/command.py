@@ -120,14 +120,13 @@ class MainWindow(urwid.WidgetWrap):
                 urwid.Divider(),
             ]),
         ], dividechars=3)
-        self.t_cluster_name = urwid.Text(b'-', align='center')
+        self.t_cluster_name = urwid.Text(b'-', align='left')
         self.t_version = urwid.Text(b'-', align='center')
         self.t_load = urwid.Text(b'-/-/-', align='right')
         self.t_hosts = urwid.Text(b'')
         self.update_header(None)
         return urwid.Frame(urwid.Filler(self.body, valign='top'),
                            header=urwid.Columns([
-                               urwid.Text(b'CrateTop v0.1'),
                                self.t_cluster_name,
                                self.t_version,
                                self.t_load,
@@ -156,11 +155,11 @@ class MainWindow(urwid.WidgetWrap):
 
     def update_header(self, info=None):
         if info is None:
-            self.t_cluster_name.set_text(["Cluster Name: ", ('text_red', '---')])
+            self.t_cluster_name.set_text(["Cluster: ", ('text_red', '---')])
             self.t_version.set_text(["Version: ", ('text_red', '---')])
         else:
             self.t_cluster_name.set_text([
-                "Cluster Name: ",
+                "Cluster: ",
                 ('inverted', info['cluster_name']),
             ])
             self.t_version.set_text([
@@ -180,6 +179,9 @@ class MainWindow(urwid.WidgetWrap):
             self.memory_widget.toggle_details()
         elif key == '4':
             self.heap_widget.toggle_details()
+        else:
+            LOGGER.info(key)
+
 
 class CrateTop(object):
 
