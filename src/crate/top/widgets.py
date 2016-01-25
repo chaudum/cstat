@@ -84,7 +84,7 @@ class HorizontalGraphWidget(urwid.Pile):
         else:
             bars = []
             for value in self._last_value:
-                bar = HorizontalBar(*value)
+                bar = HorizontalBar(*value, symbol=HorizontalBar.STAR)
                 bars.append((bar, ('pack', None)))
             self.details.contents = bars
 
