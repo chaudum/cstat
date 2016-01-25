@@ -54,9 +54,12 @@ class HorizontalBar(urwid.Text):
         (maxcol, ) = size
         chars = round(float(maxcol - 2) * self.progress)
         bar = self.symbol * chars
+        t = '{0:.1f}%'.format(self.progress * 100.0).encode('utf-8')
         space = b' ' * (maxcol - chars - 2)
+        base = bar + space
+        base = base[:len(base)-len(t)] + t
         line_attr = [('default', 1), (self.color(), maxcol-2), ('default', 1)]
-        return urwid.TextCanvas([self.START + bar + space + self.END],
+        return urwid.TextCanvas([self.START + base + self.END],
                                 attr=[line_attr,],
                                 maxcol=maxcol)
 
