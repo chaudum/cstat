@@ -22,6 +22,7 @@
 
 import urwid
 
+
 class HorizontalBar(urwid.Text):
 
     START = b'['
@@ -31,7 +32,8 @@ class HorizontalBar(urwid.Text):
     EQUI = b'='
     PIPE = b'|'
 
-    def __init__(self, current=0.0, total=100.0, symbol=PIPE):
+    def __init__(self, label, current=0.0, total=100.0, symbol=PIPE):
+        self.label = '{0:<9} '.format(label[:9]).encode('utf-8')
         self.symbol = symbol
         self.set_progress(current, total)
         super(HorizontalBar, self).__init__('')
@@ -52,26 +54,26 @@ class HorizontalBar(urwid.Text):
 
     def render(self, size, focus=False):
         (maxcol, ) = size
-        chars = round(float(maxcol - 2) * self.progress)
+        l = len(self.label)
+        steps = maxcol - 2 - l
+        chars = round(float(steps) * self.progress)
         bar = self.symbol * chars
         t = '{0:.1f}%'.format(self.progress * 100.0).encode('utf-8')
-        space = b' ' * (maxcol - chars - 2)
-        base = bar + space
+        base = bar + b' ' * (steps - chars)
         base = base[:len(base)-len(t)] + t
-        line_attr = [('default', 1), (self.color(), maxcol-2), ('default', 1)]
-        return urwid.TextCanvas([self.START + base + self.END],
+        line_attr = [('default', 1+l), (self.color(), steps), ('default', 1)]
+        return urwid.TextCanvas([self.label + self.START + base + self.END],
                                 attr=[line_attr,],
                                 maxcol=maxcol)
+
 
 class HorizontalGraphWidget(urwid.Pile):
 
     def __init__(self, title, percent=0.0):
-        self._title = title
-        self.title = urwid.Text(title)
-        self.bar = HorizontalBar(percent)
+        self.title = title
+        self.bar = HorizontalBar(title, percent)
         self.details = urwid.Pile([])
         widgets = [
-            self.title,
             self.bar,
             self.details,
         ]
@@ -84,8 +86,10 @@ class HorizontalGraphWidget(urwid.Pile):
         else:
             bars = []
             for value in self._last_value:
-                bar = HorizontalBar(*value, symbol=HorizontalBar.STAR)
+                bar = HorizontalBar(value[2], value[0], value[1],
+                                    symbol=HorizontalBar.STAR)
                 bars.append((bar, ('pack', None)))
+            bars.append((urwid.Divider(), ('pack', None)))
             self.details.contents = bars
 
     def sum(self, values=[]):
@@ -94,13 +98,13 @@ class HorizontalGraphWidget(urwid.Pile):
     def set_data(self, values=[]):
         self._last_value = values
         self.bar.set_progress(*self.sum(values))
-        num = len(self.details.contents)
+        num = len(self.details.contents) - 1
         if num == 0:
             return
         for idx in range(num):
             bar = self.details.contents[idx]
             if idx < len(values):
-                bar[0].set_progress(*values[idx])
+                bar[0].set_progress(*values[idx][:2])
             else:
                 self.details.contents.remove(bar)
 

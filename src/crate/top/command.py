@@ -101,10 +101,10 @@ class MainWindow(urwid.WidgetWrap):
         return text
 
     def layout(self):
-        self.cpu_widget = HorizontalGraphWidget(self._title('CPU Usage', '1'))
-        self.process_widget = HorizontalGraphWidget(self._title('Crate CPU Usage', '2'))
-        self.memory_widget = HorizontalGraphWidget(self._title('Memory Usage', '3'))
-        self.heap_widget = HorizontalGraphWidget(self._title('Heap Usage', '4'))
+        self.cpu_widget = HorizontalGraphWidget('CPU ')
+        self.process_widget = HorizontalGraphWidget('PROC')
+        self.memory_widget = HorizontalGraphWidget('MEM ')
+        self.heap_widget = HorizontalGraphWidget('HEAP')
         self.body = urwid.Columns([
             urwid.Pile([
                 urwid.Divider(),
@@ -112,12 +112,10 @@ class MainWindow(urwid.WidgetWrap):
                 self.process_widget,
                 self.memory_widget,
                 self.heap_widget,
-                urwid.Divider(),
             ]),
             urwid.Pile([
                 urwid.Divider(),
                 urwid.Text(self._title('Cluster Info')),
-                urwid.Divider(),
             ]),
         ], dividechars=3)
         self.t_cluster_name = urwid.Text(b'-', align='left')
@@ -141,10 +139,26 @@ class MainWindow(urwid.WidgetWrap):
         load = [0.0, 0.0, 0.0]
         num = float(len(data))
         for node in data:
-            cpu.append([node.cpu['used'], node.cpu['used']+node.cpu['idle']])
-            process.append([node.process['percent'], 100.0*node.cpus])
-            heap.append([node.heap['used'], node.heap['max']])
-            memory.append([node.mem['used'], node.mem['free']+node.mem['used']])
+            cpu.append([
+                node.cpu['used'],
+                node.cpu['used'] + node.cpu['idle'],
+                node.name,
+            ])
+            process.append([
+                node.process['percent'],
+                100.0 * node.cpus,
+                node.name,
+            ])
+            heap.append([
+                node.heap['used'],
+                node.heap['max'],
+                node.name,
+            ])
+            memory.append([
+                node.mem['used'],
+                node.mem['free'] + node.mem['used'],
+                node.name,
+            ])
             for idx, k in enumerate(['1', '5', '15']):
                 load[idx] += node.load[k] / num
         self.memory_widget.set_data(memory)
