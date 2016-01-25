@@ -21,61 +21,17 @@
 # software solely pursuant to the terms of the relevant commercial agreement.
 
 import os
-import re
 import sys
-import json
-import math
 import urwid
-import urllib3
 import argparse
 import traceback
-from collections import namedtuple
-from urllib3.exceptions import MaxRetryError
-from crate.client import connect
 from .logging import ColorLog
 from .widgets import HorizontalGraphWidget
 from .window import CrateTopWindow
+from .models import GraphModel
 
 
 LOGGER = ColorLog(__name__)
-
-
-class GraphModel(object):
-
-    QUERY = """SELECT id,
-                      name,
-                      hostname,
-                      os['cpu'] as cpu,
-                      process['cpu'] as process,
-                      os_info['available_processors'] as cpus,
-                      load,
-                      heap,
-                      mem
-               FROM sys.nodes
-               ORDER BY name"""
-
-    def __init__(self, hosts=[]):
-        self.hosts = hosts
-        self.cursor = connect(self.hosts).cursor()
-        self.http = urllib3.PoolManager(3)
-        self._cluster_info = None
-
-    def sql(self, query, args=[]):
-        self.cursor.execute(query, args)
-        Row = namedtuple('Row', [c[0] for c in self.cursor.description])
-        return [Row(*r) for r in self.cursor.fetchall()]
-
-    def refresh(self):
-        return self.sql(self.QUERY)
-
-    def cluster_info(self):
-        if not self._cluster_info:
-            response = self.http.request('GET', self.hosts[0])
-            self._cluster_info = response.status == 200 \
-                and json.loads(response.data.decode('utf-8')) \
-                or None
-        return self._cluster_info
-
 
 
 
