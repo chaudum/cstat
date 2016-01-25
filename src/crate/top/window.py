@@ -57,6 +57,7 @@ class CrateTopWindow(urwid.WidgetWrap):
         self.process_widget = HorizontalGraphWidget('PROC')
         self.memory_widget = HorizontalGraphWidget('MEM ')
         self.heap_widget = HorizontalGraphWidget('HEAP')
+        self.disk_widget = HorizontalGraphWidget('DISK')
         self.body = urwid.Columns([
             urwid.Pile([
                 urwid.Divider(),
@@ -64,6 +65,7 @@ class CrateTopWindow(urwid.WidgetWrap):
                 self.process_widget,
                 self.memory_widget,
                 self.heap_widget,
+                self.disk_widget,
             ]),
             urwid.Pile([
                 urwid.Divider(),
@@ -88,6 +90,7 @@ class CrateTopWindow(urwid.WidgetWrap):
         process = []
         heap = []
         memory = []
+        disk = []
         load = [0.0, 0.0, 0.0]
         num = float(len(data))
         for node in data:
@@ -111,13 +114,24 @@ class CrateTopWindow(urwid.WidgetWrap):
                 node.mem['free'] + node.mem['used'],
                 node.name,
             ])
+            disk.append(self.calculate_disk_usage(node.fs) + [node.name])
             for idx, k in enumerate(['1', '5', '15']):
                 load[idx] += node.load[k] / num
         self.memory_widget.set_data(memory)
         self.heap_widget.set_data(heap)
         self.cpu_widget.set_data(cpu)
         self.process_widget.set_data(process)
+        self.disk_widget.set_data(disk)
         self.t_load.set_text('Load: {0:.2f}/{1:.2f}/{2:.2f}'.format(*load))
+
+    def calculate_disk_usage(self, data):
+        fs = [0, 0]
+        data_disks = [disk['dev'] for disk in data['data']]
+        for disk in data['disks']:
+            if disk['dev'] in data_disks:
+                fs[0] += disk['used']
+                fs[1] += disk['size']
+        return fs
 
     def update_header(self, info=None):
         if info is None:
@@ -145,5 +159,7 @@ class CrateTopWindow(urwid.WidgetWrap):
             self.memory_widget.toggle_details()
         elif key == '4':
             self.heap_widget.toggle_details()
+        elif key == '5':
+            self.disk_widget.toggle_details()
         else:
             LOGGER.info(key)

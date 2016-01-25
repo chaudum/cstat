@@ -40,7 +40,8 @@ class GraphModel(object):
                       os_info['available_processors'] as cpus,
                       load,
                       heap,
-                      mem
+                      mem,
+                      fs
                FROM sys.nodes
                ORDER BY name"""
 

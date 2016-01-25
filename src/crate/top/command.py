@@ -34,7 +34,6 @@ from .models import GraphModel
 LOGGER = ColorLog(__name__)
 
 
-
 class CrateTop(object):
 
     REFRESH_INTERVAL = 2.0
