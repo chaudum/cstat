@@ -62,8 +62,7 @@ class CrateTop(object):
         if self.exit_message:
             print(self.exit_message, file=sys.stderr)
         elif ex:
-            LOGGER.error(ex.__name__)
-            LOGGER.error(ex.message)
+            LOGGER.error(ex.__name__, msg)
             for line in traceback.format_tb(trace):
                 print(line, file=sys.stderr)
 
