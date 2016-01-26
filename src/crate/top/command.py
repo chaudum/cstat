@@ -27,9 +27,9 @@ import argparse
 import traceback
 from urllib3.exceptions import MaxRetryError
 from .logging import ColorLog
+from .models import GraphModel
 from .widgets import HorizontalGraphWidget
 from .window import CrateTopWindow
-from .models import GraphModel
 
 
 LOGGER = ColorLog(__name__)

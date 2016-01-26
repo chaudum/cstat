@@ -23,7 +23,11 @@
 
 import urwid
 from .logging import ColorLog
-from .widgets import HorizontalGraphWidget
+from .widgets import (
+    HorizontalGraphWidget,
+    HorizontalPercentBar,
+    HorizontalBytesBar,
+)
 
 
 LOGGER = ColorLog(__name__)
@@ -53,11 +57,11 @@ class CrateTopWindow(urwid.WidgetWrap):
         return text
 
     def layout(self):
-        self.cpu_widget = HorizontalGraphWidget('CPU ')
+        self.cpu_widget = HorizontalGraphWidget('CPU')
         self.process_widget = HorizontalGraphWidget('PROC')
-        self.memory_widget = HorizontalGraphWidget('MEM ')
-        self.heap_widget = HorizontalGraphWidget('HEAP')
-        self.disk_widget = HorizontalGraphWidget('DISK')
+        self.memory_widget = HorizontalGraphWidget('MEM', bar_cls=HorizontalBytesBar)
+        self.heap_widget = HorizontalGraphWidget('HEAP', bar_cls=HorizontalBytesBar)
+        self.disk_widget = HorizontalGraphWidget('DISK', bar_cls=HorizontalBytesBar)
         self.body = urwid.Pile([
             urwid.Divider(),
             urwid.Text(self._title('Cluster Info')),

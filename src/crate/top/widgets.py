@@ -21,9 +21,10 @@
 # software solely pursuant to the terms of the relevant commercial agreement.
 
 import urwid
+from .exceptions import AbstractMethodNotImplemented
 
 
-class HorizontalBar(urwid.Text):
+class BarWidgetBase(urwid.Text):
 
     START = b'['
     END = b']'
@@ -36,11 +37,26 @@ class HorizontalBar(urwid.Text):
         self.label = '{0:<9} '.format(label[:9]).encode('utf-8')
         self.symbol = symbol
         self.set_progress(current, total)
-        super(HorizontalBar, self).__init__('')
+        super(BarWidgetBase, self).__init__('')
 
     def set_progress(self, current=0.0, total=100.0):
         self.progress = current / total
+        self.current = current
+        self.total = total
         self._invalidate()
+
+    def rows(self, size, focus=False):
+        return 1
+
+    def progress_text(self):
+        """
+        Value/text that should appear at the end of the progress bar
+        """
+        raise AbstractMethodNotImplemented(self.__class__,
+                                           BarWidgetBase.progress_text.__name__)
+
+
+class HorizontalBar(BarWidgetBase):
 
     def color(self):
         if self.progress < 0.8:
@@ -49,18 +65,15 @@ class HorizontalBar(urwid.Text):
             return 'text_yellow'
         return 'text_red'
 
-    def rows(self, size, focus=False):
-        return 1
-
     def render(self, size, focus=False):
         (maxcol, ) = size
         label_len = len(self.label)
         steps = maxcol - 2 - label_len
         chars = round(float(steps) * self.progress)
         bar = self.symbol * chars
-        t = '{0:.1f}%'.format(self.progress * 100.0).encode('utf-8')
+        text = self.progress_text().encode('utf-8')
         base = bar + b' ' * (steps - chars)
-        base = base[:len(base)-len(t)] + t
+        base = base[:len(base)-len(text)] + text
         line_attr = [('default', label_len + 1)]
         if chars:
             line_attr += [(self.color(), chars)]
@@ -70,11 +83,35 @@ class HorizontalBar(urwid.Text):
                                 maxcol=maxcol)
 
 
+class HorizontalPercentBar(HorizontalBar):
+
+    def progress_text(self):
+        return '{0:.1%}'.format(self.progress)
+
+
+class HorizontalBytesBar(HorizontalBar):
+
+    FMT_TEMPLATE = '{0:.1f}{1}{2}'
+    SIZES = ['', 'K', 'M', 'G', 'T', 'P', 'E', 'Z']
+
+    def bytesize_format(self, num, suffix='b'):
+        for unit in self.SIZES:
+            if abs(num) < 10240:
+                return self.FMT_TEMPLATE.format(num, unit, suffix)
+            num /= 1024.0
+        return self.FMT_TEMPLATE.format(num, 'Y', suffix)
+
+    def progress_text(self):
+        return '{0}/{1}'.format(self.bytesize_format(self.current),
+                                self.bytesize_format(self.total))
+
+
 class HorizontalGraphWidget(urwid.Pile):
 
-    def __init__(self, title, percent=0.0):
+    def __init__(self, title, percent=0.0, bar_cls=HorizontalPercentBar):
         self.title = title
-        self.bar = HorizontalBar(title, percent)
+        self.bar_cls = bar_cls
+        self.bar = bar_cls(title, percent)
         self.details = urwid.Pile([])
         widgets = [
             self.bar,
@@ -89,8 +126,8 @@ class HorizontalGraphWidget(urwid.Pile):
         else:
             bars = []
             for value in self._last_value:
-                bar = HorizontalBar(value[2], value[0], value[1],
-                                    symbol=HorizontalBar.STAR)
+                bar = self.bar_cls(value[2], value[0], value[1],
+                                   symbol=BarWidgetBase.STAR)
                 bars.append((bar, ('pack', None)))
             bars.append((urwid.Divider(), ('pack', None)))
             self.details.contents = bars
