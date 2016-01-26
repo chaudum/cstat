@@ -25,6 +25,7 @@ import sys
 import urwid
 import argparse
 import traceback
+from urllib3.exceptions import MaxRetryError
 from .logging import ColorLog
 from .widgets import HorizontalGraphWidget
 from .window import CrateTopWindow
@@ -59,15 +60,12 @@ class CrateTop(object):
 
     def __exit__(self, ex, msg, trace):
         if self.exit_message:
-            LOGGER.error(self.exit_message)
+            print(self.exit_message, file=sys.stderr)
         elif ex:
             LOGGER.error(ex.__name__)
+            LOGGER.error(ex.message)
             for line in traceback.format_tb(trace):
-                LOGGER.error(line.strip('\n'))
-        else:
-            msg = 'Thanks for using CrateTop!\n' \
-                  'Please send feedback to christian.haudum@crate.io'
-            print(msg, file=sys.stderr)
+                print(line, file=sys.stderr)
 
     def quit(self, msg=None):
         self.exit_message = msg
