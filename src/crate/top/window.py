@@ -58,20 +58,24 @@ class CrateTopWindow(urwid.WidgetWrap):
         self.memory_widget = HorizontalGraphWidget('MEM ')
         self.heap_widget = HorizontalGraphWidget('HEAP')
         self.disk_widget = HorizontalGraphWidget('DISK')
-        self.body = urwid.Columns([
-            urwid.Pile([
-                urwid.Divider(),
-                self.cpu_widget,
-                self.process_widget,
-                self.memory_widget,
-                self.heap_widget,
-                self.disk_widget,
-            ]),
-            urwid.Pile([
-                urwid.Divider(),
-                urwid.Text(self._title('Cluster Info')),
-            ]),
-        ], dividechars=3)
+        self.body = urwid.Pile([
+            urwid.Divider(),
+            urwid.Text(self._title('Cluster Info')),
+            urwid.Divider(),
+            urwid.Columns([
+                urwid.Pile([
+                    self.cpu_widget,
+                    self.process_widget,
+                ]),
+                urwid.Pile([
+                    self.memory_widget,
+                    self.heap_widget,
+                ]),
+            ], dividechars=3),
+            urwid.Divider(),
+            self.disk_widget,
+            urwid.Divider(),
+        ])
         self.t_cluster_name = urwid.Text(b'-', align='left')
         self.t_version = urwid.Text(b'-', align='center')
         self.t_load = urwid.Text(b'-/-/-', align='right')
