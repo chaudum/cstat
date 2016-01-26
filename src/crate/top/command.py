@@ -27,7 +27,7 @@ import argparse
 import traceback
 from urllib3.exceptions import MaxRetryError
 from .logging import ColorLog
-from .models import GraphModel
+from .models import GraphModel, NodesModel, JobsModel
 from .widgets import HorizontalGraphWidget
 from .window import CrateTopWindow
 
@@ -40,7 +40,11 @@ class CrateTop(object):
     REFRESH_INTERVAL = 2.0
 
     def __init__(self, hosts=[]):
-        self.model = GraphModel(hosts)
+        self.models = [
+            GraphModel(hosts),
+            NodesModel(hosts),
+            JobsModel(hosts),
+        ]
         self.view = CrateTopWindow(self)
         self.view.update_footer(hosts)
         self.loop = None
@@ -48,7 +52,7 @@ class CrateTop(object):
 
     def __call__(self):
         if not self.fetch_initial():
-            return self.quit('Could not connect to {0}'.format(self.model.hosts))
+            return self.quit('Could not connect to {0}'.format(self.models[0].hosts))
         self.loop = urwid.MainLoop(self.view,
                                    self.view.PALETTE,
                                    unhandled_input=self.handle_input)
@@ -75,24 +79,30 @@ class CrateTop(object):
     def handle_input(self, key):
         if key in ('q', 'Q'):
             self.quit()
+        elif key == 'f1':
+            self.models[2].toggle()
+            self.view.set_logging_state(self.models[2].enabled)
         else:
             self.view.handle_input(key)
 
     def fetch_initial(self):
         try:
-            info = self.model.cluster_info()
-            self.view.update_header(info)
+            info = self.models[0].refresh()
+            self.view.update(info=info)
+            stats_enabled = self.models[2].enabled
+            self.view.set_logging_state(stats_enabled)
         except MaxRetryError as e:
             return False
         return True
 
     def fetch(self, loop, args):
         try:
-            data = self.model.refresh()
+            # todo: make this multithreaded
+            info, nodes, jobs = [m.refresh() for m in self.models]
         except Exception as e:
             self.quit(e)
         else:
-            self.view.update(data)
+            self.view.update(info, nodes, jobs)
         loop.set_alarm_in(self.REFRESH_INTERVAL, self.fetch)
 
 
