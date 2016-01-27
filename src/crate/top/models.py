@@ -110,16 +110,12 @@ class NodesModel(ModelBase):
                load,
                heap,
                mem,
-               fs
+               fs,
+               network['probe_timestamp'] as net_timestamp,
+               network['tcp']['packets'] as net_packets
         FROM sys.nodes
         ORDER BY name
     """.strip('\n '))
-
-    def enable(self):
-        pass
-
-    def disable(self):
-        pass
 
 
 class GraphModel(ModelBase):

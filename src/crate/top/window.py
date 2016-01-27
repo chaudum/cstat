@@ -27,6 +27,8 @@ from .widgets import (
     MultiBarWidget,
     HorizontalPercentBar,
     HorizontalBytesBar,
+    IOStatWidget,
+    IOBar,
 )
 
 
@@ -57,6 +59,7 @@ class CrateTopWindow(urwid.WidgetWrap):
         self.memory_widget = MultiBarWidget('MEM', bar_cls=HorizontalBytesBar)
         self.heap_widget = MultiBarWidget('HEAP', bar_cls=HorizontalBytesBar)
         self.disk_widget = MultiBarWidget('DISK', bar_cls=HorizontalBytesBar)
+        self.net_io_widget = IOStatWidget('NET I/O', bar_cls=IOBar)
         self.logging_state = urwid.Text([('headline', b'Job Logging')])
         self.logs = urwid.SimpleFocusListWalker([])
         self.body = urwid.Pile([
@@ -74,6 +77,14 @@ class CrateTopWindow(urwid.WidgetWrap):
                 ]),
             ], dividechars=3),
             urwid.Divider(),
+            urwid.Columns([
+                urwid.Pile([
+                    self.net_io_widget,
+                ]),
+                urwid.Pile([
+                ]),
+            ], dividechars=3),
+            urwid.Divider(),
             self.disk_widget,
             urwid.Divider(),
             urwid.Pile([
@@ -83,7 +94,6 @@ class CrateTopWindow(urwid.WidgetWrap):
                 urwid.Divider(),
                 urwid.BoxAdapter(urwid.ListBox(self.logs), height=10),
             ]),
-            urwid.Divider(),
         ])
         self.t_cluster_name = urwid.Text(b'-', align='left')
         self.t_version = urwid.Text(b'-', align='center')
@@ -139,6 +149,7 @@ class CrateTopWindow(urwid.WidgetWrap):
         process = []
         heap = []
         memory = []
+        network = []
         disk = []
         load = [0.0, 0.0, 0.0]
         num = float(len(data))
@@ -164,6 +175,11 @@ class CrateTopWindow(urwid.WidgetWrap):
                 node.name,
             ])
             disk.append(self.calculate_disk_usage(node.fs) + [node.name])
+            network.append([
+                node.net_timestamp,
+                node.net_packets,
+                node.name,
+            ])
             for idx, k in enumerate(['1', '5', '15']):
                 load[idx] += node.load[k] / num
         self.memory_widget.set_data(memory)
@@ -171,6 +187,7 @@ class CrateTopWindow(urwid.WidgetWrap):
         self.cpu_widget.set_data(cpu)
         self.process_widget.set_data(process)
         self.disk_widget.set_data(disk)
+        self.net_io_widget.set_data(network)
         self.t_load.set_text('Load: {0:.2f}/{1:.2f}/{2:.2f}'.format(*load))
 
     def calculate_disk_usage(self, data):
@@ -206,6 +223,8 @@ class CrateTopWindow(urwid.WidgetWrap):
             self.memory_widget.toggle_details()
             self.heap_widget.toggle_details()
         elif key == '2':
+            self.net_io_widget.toggle_details()
+        elif key == '3':
             self.disk_widget.toggle_details()
         else:
             LOGGER.warn('Unhandled input:', key)

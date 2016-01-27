@@ -21,7 +21,22 @@
 # software solely pursuant to the terms of the relevant commercial agreement.
 
 import urwid
+from datetime import datetime
 from .exceptions import AbstractMethodNotImplemented
+
+
+class ByteSizeFormat(object):
+
+    FMT_TEMPLATE = '{0:.1f}{1}{2}'
+    SIZES = ['', 'K', 'M', 'G', 'T', 'P', 'E', 'Z']
+
+    @classmethod
+    def format(cls, num, suffix='b'):
+        for unit in cls.SIZES:
+            if abs(num) < 10240:
+                return cls.FMT_TEMPLATE.format(num, unit, suffix)
+            num /= 1024.0
+        return cls.FMT_TEMPLATE.format(num, 'Y', suffix)
 
 
 class BarWidgetBase(urwid.Text):
@@ -42,24 +57,28 @@ class BarWidgetBase(urwid.Text):
         return 1
 
 
-class HorizontalBar(BarWidgetBase):
+class AbstractBar(BarWidgetBase):
 
     def __init__(self, label, current=0.0, total=100.0, symbol=BarWidgetBase.PIPE):
-        super(HorizontalBar, self).__init__(label, symbol)
+        super(AbstractBar, self).__init__(label, symbol)
         self.set_progress(current, total)
+
+    def set_progress(self, current=0.0, total=100.0):
+        raise AbstractMethodNotImplemented(self.__class__,
+                                           self.set_progress.__name__)
+
+    def progress_text(self):
+        raise AbstractMethodNotImplemented(self.__class__,
+                                           self.progress_text.__name__)
+
+
+class HorizontalBar(AbstractBar):
 
     def set_progress(self, current=0.0, total=100.0):
         self.progress = current / total
         self.current = current
         self.total = total
         self._invalidate()
-
-    def progress_text(self):
-        """
-        Value/text that should appear at the end of the progress bar
-        """
-        raise AbstractMethodNotImplemented(self.__class__,
-                                           HorizontalBar.progress_text.__name__)
 
     def color(self):
         if self.progress < 0.8:
@@ -94,19 +113,9 @@ class HorizontalPercentBar(HorizontalBar):
 
 class HorizontalBytesBar(HorizontalBar):
 
-    FMT_TEMPLATE = '{0:.1f}{1}{2}'
-    SIZES = ['', 'K', 'M', 'G', 'T', 'P', 'E', 'Z']
-
-    def bytesize_format(self, num, suffix='b'):
-        for unit in self.SIZES:
-            if abs(num) < 10240:
-                return self.FMT_TEMPLATE.format(num, unit, suffix)
-            num /= 1024.0
-        return self.FMT_TEMPLATE.format(num, 'Y', suffix)
-
     def progress_text(self):
-        return '{0}/{1}'.format(self.bytesize_format(self.current),
-                                self.bytesize_format(self.total))
+        return '{0}/{1}'.format(ByteSizeFormat.format(self.current),
+                                ByteSizeFormat.format(self.total))
 
 
 class MultiBarWidget(urwid.Pile):
@@ -150,4 +159,80 @@ class MultiBarWidget(urwid.Pile):
                 bar[0].set_progress(*values[idx][:2])
             else:
                 self.details.contents.remove(bar)
+
+
+class IOBar(AbstractBar):
+
+    def __init__(self, label, tx=0.0, rx=0.0, symbol=None):
+        self.template = 'Tx: {0:>8}/s Rx: {1:>8}/s'
+        super(IOBar, self).__init__(label, 0.0, 0.0, symbol)
+
+    def set_progress(self, tx=0.0, rx=0.0):
+        self.tx = tx
+        self.rx = rx
+        self._invalidate()
+
+    def render(self, size, focus=False):
+        # TODO: improve coloring
+        (maxcol, ) = size
+        label_len = len(self.label)
+        max_text_width = maxcol - 2 - label_len
+        text = self.template.format(
+            ByteSizeFormat.format(self.tx, suffix='p'),
+            ByteSizeFormat.format(self.rx, suffix='p')
+        )
+        base = ' ' * max_text_width
+        if len(text) > max_text_width:
+            base = text[:max_text_width]
+        else:
+            base = text + ' ' * (max_text_width - len(text))
+        base = base[:max_text_width].encode('utf-8')
+        line_attr = [
+            ('default', label_len + 1),
+            ('text_green', min(len(text), max_text_width)),
+            ('default', 1),
+        ]
+        return urwid.TextCanvas([self.label + self.START + base + self.END],
+                                attr=[line_attr],
+                                maxcol=maxcol)
+
+
+class IOStatWidget(MultiBarWidget):
+
+    def toggle_details(self):
+        if len(self.details.contents):
+            self.details.contents = []
+        else:
+            bars = []
+            for ts, packets, name in self._last_value:
+                bar = self.bar_cls(name, 0.0, 0.0, symbol=None)
+                bars.append((bar, ('pack', None)))
+            bars.append((urwid.Divider(), ('pack', None)))
+            self.details.contents = bars
+
+    def set_data(self, values=[]):
+        if len(self._last_value):
+            tx_total = 0.0
+            rx_total = 0.0
+            for idx, bar in enumerate(self.details.contents):
+                if idx < len(values):
+                    tx, rx = self._calculate(values[idx], self._last_value[idx])
+                    tx_total += tx
+                    rx_total += rx
+                    bar[0].set_progress(tx, rx)
+                else:
+                    self.details.contents.remove(bar)
+            self.bar.set_progress(tx_total, rx_total)
+        self._last_value = values
+
+    def _calculate(self, value, last_value):
+        last_timestamp, last_packets, last_name = last_value
+        timestamp, packets, name = value 
+        assert last_name == name
+        diff = (timestamp - last_timestamp) / 1000.0
+        tx, rx = 0.0, 0.0
+        if diff > 0.0:
+            tx = (packets['sent'] - last_packets['sent']) / diff
+            rx = (packets['received'] - last_packets['received']) / diff
+        return (tx, rx)
 
