@@ -33,11 +33,20 @@ class BarWidgetBase(urwid.Text):
     EQUI = b'='
     PIPE = b'|'
 
-    def __init__(self, label, current=0.0, total=100.0, symbol=PIPE):
+    def __init__(self, label, symbol):
         self.label = '{0:<9} '.format(label[:9]).encode('utf-8')
         self.symbol = symbol
+        super(BarWidgetBase, self).__init__(self.label)
+
+    def rows(self, size, focus=False):
+        return 1
+
+
+class HorizontalBar(BarWidgetBase):
+
+    def __init__(self, label, current=0.0, total=100.0, symbol=BarWidgetBase.PIPE):
+        super(HorizontalBar, self).__init__(label, symbol)
         self.set_progress(current, total)
-        super(BarWidgetBase, self).__init__('')
 
     def set_progress(self, current=0.0, total=100.0):
         self.progress = current / total
@@ -45,18 +54,12 @@ class BarWidgetBase(urwid.Text):
         self.total = total
         self._invalidate()
 
-    def rows(self, size, focus=False):
-        return 1
-
     def progress_text(self):
         """
         Value/text that should appear at the end of the progress bar
         """
         raise AbstractMethodNotImplemented(self.__class__,
-                                           BarWidgetBase.progress_text.__name__)
-
-
-class HorizontalBar(BarWidgetBase):
+                                           HorizontalBar.progress_text.__name__)
 
     def color(self):
         if self.progress < 0.8:
@@ -106,19 +109,19 @@ class HorizontalBytesBar(HorizontalBar):
                                 self.bytesize_format(self.total))
 
 
-class HorizontalGraphWidget(urwid.Pile):
+class MultiBarWidget(urwid.Pile):
 
-    def __init__(self, title, percent=0.0, bar_cls=HorizontalPercentBar):
+    def __init__(self, title, bar_cls=HorizontalPercentBar):
         self.title = title
         self.bar_cls = bar_cls
-        self.bar = bar_cls(title, percent)
+        self.bar = bar_cls(title)
         self.details = urwid.Pile([])
         widgets = [
             self.bar,
             self.details,
         ]
         self._last_value = []
-        super(HorizontalGraphWidget, self).__init__(widgets)
+        super(MultiBarWidget, self).__init__(widgets)
 
     def toggle_details(self):
         if len(self.details.contents):

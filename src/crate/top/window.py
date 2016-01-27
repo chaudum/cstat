@@ -24,7 +24,7 @@
 import urwid
 from .logging import ColorLog
 from .widgets import (
-    HorizontalGraphWidget,
+    MultiBarWidget,
     HorizontalPercentBar,
     HorizontalBytesBar,
 )
@@ -52,11 +52,11 @@ class CrateTopWindow(urwid.WidgetWrap):
         super(CrateTopWindow, self).__init__(self.frame)
 
     def layout(self):
-        self.cpu_widget = HorizontalGraphWidget('CPU')
-        self.process_widget = HorizontalGraphWidget('PROC')
-        self.memory_widget = HorizontalGraphWidget('MEM', bar_cls=HorizontalBytesBar)
-        self.heap_widget = HorizontalGraphWidget('HEAP', bar_cls=HorizontalBytesBar)
-        self.disk_widget = HorizontalGraphWidget('DISK', bar_cls=HorizontalBytesBar)
+        self.cpu_widget = MultiBarWidget('CPU')
+        self.process_widget = MultiBarWidget('PROC')
+        self.memory_widget = MultiBarWidget('MEM', bar_cls=HorizontalBytesBar)
+        self.heap_widget = MultiBarWidget('HEAP', bar_cls=HorizontalBytesBar)
+        self.disk_widget = MultiBarWidget('DISK', bar_cls=HorizontalBytesBar)
         self.logging_state = urwid.Text([('headline', b'Job Logging')])
         self.logs = urwid.SimpleFocusListWalker([])
         self.body = urwid.Pile([

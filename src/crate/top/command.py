@@ -27,7 +27,6 @@ import argparse
 import traceback
 from .logging import ColorLog
 from .models import GraphModel, NodesModel, JobsModel
-from .widgets import HorizontalGraphWidget
 from .window import CrateTopWindow
 
 
