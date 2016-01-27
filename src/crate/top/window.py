@@ -202,13 +202,10 @@ class CrateTopWindow(urwid.WidgetWrap):
     def handle_input(self, key):
         if key == '1':
             self.cpu_widget.toggle_details()
-        elif key == '2':
             self.process_widget.toggle_details()
-        elif key == '3':
             self.memory_widget.toggle_details()
-        elif key == '4':
             self.heap_widget.toggle_details()
-        elif key == '5':
+        elif key == '2':
             self.disk_widget.toggle_details()
         else:
             LOGGER.warn('Unhandled input:', key)
