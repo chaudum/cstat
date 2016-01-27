@@ -6,9 +6,15 @@
 
 ![Screenshot of ctop in action](screenshot.png)
 
+## Hotkeys
+
+* `[1]` ... toggle detail bars for `CPU`, `PROC`, `MEM`, `HEAP`
+* `[2]` ... toggle detail bars for `DISK`
+* `[f1]` ... enable/disable job logging (this also sets the `stats.jobs_log` cluster setting)
+
 ## What I want to do
 
-* display disk usage
-* display disk i/o
-* display network i/o
-* display node names in detail views
+[x] display disk usage
+[ ] display disk i/o
+[ ] display network i/o
+[x] display node names in detail views
