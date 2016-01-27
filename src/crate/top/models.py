@@ -74,7 +74,11 @@ class JobsModel(ModelBase):
 
     def __init__(self, hosts=[]):
         super(JobsModel, self).__init__(hosts)
-        self.enabled = self.get_initial_state()
+        try:
+            self.enabled = self.get_initial_state()
+        except Exception:
+            self.enabled = False
+
 
     def get_initial_state(self):
         res = self.sql("""SELECT settings['stats']['enabled'] as enabled FROM sys.cluster""")

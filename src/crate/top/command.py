@@ -25,7 +25,6 @@ import sys
 import urwid
 import argparse
 import traceback
-from urllib3.exceptions import MaxRetryError
 from .logging import ColorLog
 from .models import GraphModel, NodesModel, JobsModel
 from .widgets import HorizontalGraphWidget
@@ -88,11 +87,12 @@ class CrateTop(object):
     def fetch_initial(self):
         try:
             info = self.models[0].refresh()
-            self.view.update(info=info)
-            stats_enabled = self.models[2].enabled
-            self.view.set_logging_state(stats_enabled)
-        except MaxRetryError as e:
+        except Exception as e:
             return False
+        else:
+            self.view.update(info=info)
+            stats_enabled = self.models[2].get_initial_state()
+            self.view.set_logging_state(stats_enabled)
         return True
 
     def fetch(self, loop, args):
