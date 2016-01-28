@@ -104,6 +104,7 @@ class NodesModel(ModelBase):
         SELECT id,
                name,
                hostname,
+               format('%s:%d', hostname, port['http']) as host,
                os['cpu'] as cpu,
                process['cpu'] as process,
                os_info['available_processors'] as cpus,

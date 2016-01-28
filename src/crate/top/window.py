@@ -68,17 +68,24 @@ class CrateTopWindow(urwid.WidgetWrap):
         self.t_cluster_name = urwid.Text(b'-')
         self.t_version = urwid.Text(b'-')
         self.t_load = urwid.Text(b'-/-/-')
-        self.t_hosts = urwid.Text(b'')
+        self.t_hosts = urwid.Text(b'-')
+        self.t_handler = urwid.Text(b'-')
 
         header = urwid.Columns([
-            urwid.Pile([
+            (10, urwid.Pile([
+                urwid.Text(b'Cluster'),
+                urwid.Text(b'Version'),
+                urwid.Text(b'Load'),
+                urwid.Text(b'Handler'),
+                urwid.Text(b'Hosts'),
+            ])),
+            urwid.AttrMap(urwid.Pile([
                 self.t_cluster_name,
-                self.t_hosts,
                 self.t_version,
                 self.t_load,
-            ]),
-            urwid.Pile([
-            ]),
+                self.t_handler,
+                self.t_hosts,
+            ]), 'headline'),
         ])
 
         self.body = urwid.Pile([
@@ -215,10 +222,8 @@ class CrateTopWindow(urwid.WidgetWrap):
         self.disk_widget.set_data(disk)
         self.net_io_widget.set_data(net_io)
         self.disk_io_widget.set_data(disk_io)
-        self.t_load.set_text([
-            ('default', 'Load:    '),
-            ('headline', '{0:.2f}/{1:.2f}/{2:.2f}'.format(*load)),
-        ])
+        self.t_load.set_text('{0:.2f}/{1:.2f}/{2:.2f}'.format(*load))
+        self.t_hosts.set_text(', '.join([n.hostname for n in data]))
 
     def _data_disks(self, data):
         data_disks = [disk['dev'] for disk in data['data']]
@@ -242,26 +247,14 @@ class CrateTopWindow(urwid.WidgetWrap):
 
     def update_info(self, info=None):
         if info is None:
-            self.t_cluster_name.set_text([
-                "Cluster: ",
-                ('text_red', '---')
-            ])
-            self.t_version.set_text([
-                "Version: ",
-                ('text_red', '---')
-            ])
+            self.t_cluster_name.set_text([('text_red', '---')])
+            self.t_version.set_text([('text_red', '---')])
         else:
-            self.t_cluster_name.set_text([
-                "Cluster: ",
-                ('headline', info['cluster_name']),
-            ])
-            self.t_version.set_text([
-                "Version: ",
-                ('headline', info['version']['number']),
-            ])
+            self.t_cluster_name.set_text(info['cluster_name'])
+            self.t_version.set_text(info['version']['number'])
 
     def update_footer(self, hosts):
-        self.t_hosts.set_text(['Hosts:   ', ('headline', ' '.join(hosts))])
+        self.t_handler.set_text(' '.join(hosts))
 
     def handle_input(self, key):
         if key == '1':
