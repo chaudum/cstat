@@ -31,7 +31,6 @@ from .widgets import (
     IOBar,
 )
 
-
 LOGGER = ColorLog(__name__)
 
 
@@ -59,7 +58,8 @@ class CrateTopWindow(urwid.WidgetWrap):
         self.memory_widget = MultiBarWidget('MEM', bar_cls=HorizontalBytesBar)
         self.heap_widget = MultiBarWidget('HEAP', bar_cls=HorizontalBytesBar)
         self.disk_widget = MultiBarWidget('DISK', bar_cls=HorizontalBytesBar)
-        self.net_io_widget = IOStatWidget('NET I/O', bar_cls=IOBar)
+        self.net_io_widget = IOStatWidget('NET I/O', suffix='p/s')
+        self.disk_io_widget = IOStatWidget('DISK I/O', suffix='b/s')
         self.logging_state = urwid.Text([('headline', b'Job Logging')])
         self.logs = urwid.SimpleFocusListWalker([])
         self.body = urwid.Pile([
@@ -82,6 +82,7 @@ class CrateTopWindow(urwid.WidgetWrap):
                     self.net_io_widget,
                 ]),
                 urwid.Pile([
+                    self.disk_io_widget,
                 ]),
             ], dividechars=3),
             urwid.Divider(),
@@ -149,8 +150,9 @@ class CrateTopWindow(urwid.WidgetWrap):
         process = []
         heap = []
         memory = []
-        network = []
         disk = []
+        net_io = []
+        disk_io = []
         load = [0.0, 0.0, 0.0]
         num = float(len(data))
         for node in data:
@@ -175,9 +177,14 @@ class CrateTopWindow(urwid.WidgetWrap):
                 node.name,
             ])
             disk.append(self.calculate_disk_usage(node.fs) + [node.name])
-            network.append([
+            net_io.append([
                 node.net_timestamp,
-                node.net_packets,
+                dict(tx=node.net_packets['sent'], rx=node.net_packets['received']),
+                node.name,
+            ])
+            disk_io.append([
+                node.net_timestamp,
+                self.calculate_disk_io(node.fs),
                 node.name,
             ])
             for idx, k in enumerate(['1', '5', '15']):
@@ -187,17 +194,29 @@ class CrateTopWindow(urwid.WidgetWrap):
         self.cpu_widget.set_data(cpu)
         self.process_widget.set_data(process)
         self.disk_widget.set_data(disk)
-        self.net_io_widget.set_data(network)
+        self.net_io_widget.set_data(net_io)
+        self.disk_io_widget.set_data(disk_io)
         self.t_load.set_text('Load: {0:.2f}/{1:.2f}/{2:.2f}'.format(*load))
 
-    def calculate_disk_usage(self, data):
-        fs = [0, 0]
+    def _data_disks(self, data):
         data_disks = [disk['dev'] for disk in data['data']]
         for disk in data['disks']:
             if disk['dev'] in data_disks:
-                fs[0] += disk['used']
-                fs[1] += disk['size']
+                yield disk
+
+    def calculate_disk_usage(self, data):
+        fs = [0, 0]
+        for disk in self._data_disks(data):
+            fs[0] += disk['used']
+            fs[1] += disk['size']
         return fs
+
+    def calculate_disk_io(self, data):
+        io = dict(tx=0, rx=0)
+        for disk in self._data_disks(data):
+            io['tx'] += disk['bytes_written']
+            io['rx'] += disk['bytes_read']
+        return io
 
     def update_info(self, info=None):
         if info is None:
@@ -224,6 +243,7 @@ class CrateTopWindow(urwid.WidgetWrap):
             self.heap_widget.toggle_details()
         elif key == '2':
             self.net_io_widget.toggle_details()
+            self.disk_io_widget.toggle_details()
         elif key == '3':
             self.disk_widget.toggle_details()
         else:

@@ -120,10 +120,10 @@ class HorizontalBytesBar(HorizontalBar):
 
 class MultiBarWidget(urwid.Pile):
 
-    def __init__(self, title, bar_cls=HorizontalPercentBar):
+    def __init__(self, title, bar_cls=HorizontalPercentBar, **bar_options):
         self.title = title
         self.bar_cls = bar_cls
-        self.bar = bar_cls(title)
+        self.bar = bar_cls(title, **bar_options)
         self.details = urwid.Pile([])
         widgets = [
             self.bar,
@@ -162,10 +162,15 @@ class MultiBarWidget(urwid.Pile):
 
 
 class IOBar(AbstractBar):
+    """
+    Tx ... sent/written/outbound
+    Rx ... received/read/inbound
+    """
 
-    def __init__(self, label, tx=0.0, rx=0.0, symbol=None):
-        self.template = 'Tx: {0:>8}/s Rx: {1:>8}/s'
-        super(IOBar, self).__init__(label, 0.0, 0.0, symbol)
+    def __init__(self, label, suffix='p/s'):
+        self.template = 'Tx: {0:>10} Rx: {1:>10}'
+        self.suffix = suffix
+        super(IOBar, self).__init__(label, 0.0, 0.0, symbol=b'x')
 
     def set_progress(self, tx=0.0, rx=0.0):
         self.tx = tx
@@ -178,8 +183,8 @@ class IOBar(AbstractBar):
         label_len = len(self.label)
         max_text_width = maxcol - 2 - label_len
         text = self.template.format(
-            ByteSizeFormat.format(self.tx, suffix='p'),
-            ByteSizeFormat.format(self.rx, suffix='p')
+            ByteSizeFormat.format(self.tx, suffix=self.suffix),
+            ByteSizeFormat.format(self.rx, suffix=self.suffix)
         )
         base = ' ' * max_text_width
         if len(text) > max_text_width:
@@ -199,13 +204,17 @@ class IOBar(AbstractBar):
 
 class IOStatWidget(MultiBarWidget):
 
+    def __init__(self, title, suffix):
+        super(IOStatWidget, self).__init__(title, bar_cls=IOBar, suffix=suffix)
+        self.suffix = suffix
+
     def toggle_details(self):
         if len(self.details.contents):
             self.details.contents = []
         else:
             bars = []
             for ts, packets, name in self._last_value:
-                bar = self.bar_cls(name, 0.0, 0.0, symbol=None)
+                bar = self.bar_cls(name, suffix=self.suffix)
                 bars.append((bar, ('pack', None)))
             bars.append((urwid.Divider(), ('pack', None)))
             self.details.contents = bars
@@ -216,7 +225,10 @@ class IOStatWidget(MultiBarWidget):
             rx_total = 0.0
             for idx, bar in enumerate(self.details.contents):
                 if idx < len(values):
-                    tx, rx = self._calculate(values[idx], self._last_value[idx])
+                    if self._last_value[idx][0] >= values[idx][0]:
+                        tx, rx = bar[0].tx, bar[0].rx
+                    else:
+                        tx, rx = self._calculate(values[idx], self._last_value[idx])
                     tx_total += tx
                     rx_total += rx
                     bar[0].set_progress(tx, rx)
@@ -227,12 +239,11 @@ class IOStatWidget(MultiBarWidget):
 
     def _calculate(self, value, last_value):
         last_timestamp, last_packets, last_name = last_value
-        timestamp, packets, name = value 
+        timestamp, packets, name = value
         assert last_name == name
         diff = (timestamp - last_timestamp) / 1000.0
-        tx, rx = 0.0, 0.0
-        if diff > 0.0:
-            tx = (packets['sent'] - last_packets['sent']) / diff
-            rx = (packets['received'] - last_packets['received']) / diff
-        return (tx, rx)
+        assert diff > 0
+        tx = (packets['tx'] - last_packets['tx']) / diff
+        rx = (packets['rx'] - last_packets['rx']) / diff
+        return tx, rx
 

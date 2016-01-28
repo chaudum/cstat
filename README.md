@@ -28,14 +28,16 @@ optional arguments:
 ## Hotkeys
 
 - `1` ... toggle detail bars for `CPU`, `PROC`, `MEM`, `HEAP`
-- `2` ... toggle detail bars for `NET I/O`
+- `2` ... toggle detail bars for `NET I/O`, `DISK I/O`
 - `3` ... toggle defail bars for `DISK`
 - `f1` ... enable/disable job logging (this also sets the `stats.jobs_log` cluster setting)
 
 ## Todo
 
 - [x] display disk usage
-- [ ] display disk i/o
-- [ ] display network i/o
+- [x] display disk i/o
+- [x] display network i/o
 - [x] display node names in detail views
 - [ ] use multiprocessing to perform http requests
+- [ ] coloring of i/o stats
+- [ ] responsive i/o widget
