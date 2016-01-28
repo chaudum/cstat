@@ -49,7 +49,7 @@ class BarWidgetBase(urwid.Text):
     PIPE = b'|'
 
     def __init__(self, label, symbol):
-        self.label = '{0:<9} '.format(label[:9]).encode('utf-8')
+        self.label = '{0:<10}'.format(label[:9]).encode('utf-8')
         self.symbol = symbol
         super(BarWidgetBase, self).__init__(self.label)
 
@@ -168,7 +168,7 @@ class IOBar(AbstractBar):
     """
 
     def __init__(self, label, suffix='p/s'):
-        self.template = 'Tx: {0:>10} Rx: {1:>10}'
+        self.tpl = '{0}: {1:>10}'
         self.suffix = suffix
         super(IOBar, self).__init__(label, 0.0, 0.0, symbol=b'x')
 
@@ -178,26 +178,35 @@ class IOBar(AbstractBar):
         self._invalidate()
 
     def render(self, size, focus=False):
-        # TODO: improve coloring
+        """
+         LABEL      [   Tx:     0.0 b/s      Rx:      0.0b/s   ]
+        +----------+-+-+----+----------+...-+----+----------+-+-+
+                 10 1 1    4         10    1    4         10 1 1
+        +--------------+---------------+...-+---------------+---+
+                     12              14    1              14   2
+        +-------------------------------...---------------------+
+                                                              43
+        """
         (maxcol, ) = size
-        label_len = len(self.label)
-        max_text_width = maxcol - 2 - label_len
-        text = self.template.format(
-            ByteSizeFormat.format(self.tx, suffix=self.suffix),
-            ByteSizeFormat.format(self.rx, suffix=self.suffix)
-        )
-        base = ' ' * max_text_width
-        if len(text) > max_text_width:
-            base = text[:max_text_width]
-        else:
-            base = text + ' ' * (max_text_width - len(text))
-        base = base[:max_text_width].encode('utf-8')
+        label_len = len(self.label) # sanity check. should always be 10
+        var = maxcol - 42
+        if var < 1:
+            raise AssertionError('IOBar requires a minimum width of 43 columns!')
+        text = ' '
+        text += self.tpl.format('Tx',
+                ByteSizeFormat.format(self.tx, suffix=self.suffix))
+        text += ' ' * var
+        text += self.tpl.format('Rx',
+                ByteSizeFormat.format(self.rx, suffix=self.suffix))
+        text += ' '
         line_attr = [
-            ('default', label_len + 1),
-            ('text_green', min(len(text), max_text_width)),
-            ('default', 1),
+            ('default', 12),
+            ('tx', 14),
+            ('default', var),
+            ('rx', 14),
+            ('default', 2),
         ]
-        return urwid.TextCanvas([self.label + self.START + base + self.END],
+        return urwid.TextCanvas([self.label + self.START + text.encode('utf-8') + self.END],
                                 attr=[line_attr],
                                 maxcol=maxcol)
 

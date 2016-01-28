@@ -45,6 +45,8 @@ class CrateTopWindow(urwid.WidgetWrap):
         ('text_green', 'dark green', 'default'),
         ('text_yellow', 'yellow', 'default'),
         ('text_red', 'dark red', 'default'),
+        ('tx', 'dark cyan', 'default'),
+        ('rx', 'dark magenta', 'default'),
     ]
 
     def __init__(self, controller):
@@ -64,7 +66,7 @@ class CrateTopWindow(urwid.WidgetWrap):
         self.logs = urwid.SimpleFocusListWalker([])
         self.body = urwid.Pile([
             urwid.Divider(),
-            urwid.Text([('headline', b'Cluster Info')]),
+            urwid.Text([('headline', b'Stats')]),
             urwid.Divider(),
             urwid.Columns([
                 urwid.Pile([

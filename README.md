@@ -31,6 +31,10 @@ optional arguments:
 - `2` ... toggle detail bars for `NET I/O`, `DISK I/O`
 - `f1` ... enable/disable job logging (this also sets the `stats.jobs_log` cluster setting)
 
+## Known Issues
+
+- Small terminal sizes will raise CanvasErrors because of content overflow
+
 ## Todo
 
 - [x] display disk usage
