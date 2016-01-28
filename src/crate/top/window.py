@@ -64,6 +64,23 @@ class CrateTopWindow(urwid.WidgetWrap):
         self.disk_io_widget = IOStatWidget('DISK I/O', suffix='b/s')
         self.logging_state = urwid.Text([('headline', b'Job Logging')])
         self.logs = urwid.SimpleFocusListWalker([])
+
+        self.t_cluster_name = urwid.Text(b'-')
+        self.t_version = urwid.Text(b'-')
+        self.t_load = urwid.Text(b'-/-/-')
+        self.t_hosts = urwid.Text(b'')
+
+        header = urwid.Columns([
+            urwid.Pile([
+                self.t_cluster_name,
+                self.t_hosts,
+                self.t_version,
+                self.t_load,
+            ]),
+            urwid.Pile([
+            ]),
+        ])
+
         self.body = urwid.Pile([
             urwid.Divider(),
             urwid.Text([('headline', b'Stats')]),
@@ -93,23 +110,25 @@ class CrateTopWindow(urwid.WidgetWrap):
                 self.logging_state,
                 urwid.Divider(),
                 self._jobs_row('Count', 'Min', 'Max', 'Avg', 'Statement Type'),
-                urwid.Divider(),
                 urwid.BoxAdapter(urwid.ListBox(self.logs), height=10),
             ]),
         ])
-        self.t_cluster_name = urwid.Text(b'-', align='left')
-        self.t_version = urwid.Text(b'-', align='center')
-        self.t_load = urwid.Text(b'-/-/-', align='right')
-        self.t_hosts = urwid.Text(b'')
-        self.update_info(None)
 
+        footer = urwid.Columns([
+            (1, urwid.Text(b'1')),
+            (6, urwid.AttrMap(urwid.Text(b'Stats'), 'inverted')),
+            (1, urwid.Text(b'2')),
+            (6, urwid.AttrMap(urwid.Text(b'I/O'), 'inverted')),
+            (2, urwid.Text(b'F1')),
+            (6, urwid.AttrMap(urwid.Text(b'Jobs'), 'inverted')),
+            ('pack', urwid.AttrMap(urwid.Text(''), 'inverted')),
+        ])
+
+        self.update_info(None)
         return urwid.Frame(urwid.Filler(self.body, valign='top'),
-                           header=urwid.Columns([
-                               self.t_cluster_name,
-                               self.t_version,
-                               self.t_load,
-                           ]),
-                           footer=urwid.Columns([self.t_hosts]))
+                           header=header,
+                           footer=footer)
+
 
     def update(self, info=None, nodes=[], jobs=[]):
         if info:
@@ -122,27 +141,26 @@ class CrateTopWindow(urwid.WidgetWrap):
     def update_jobs(self, jobs=[], clear=False):
         if not clear and jobs:
             self.logs[:] = [self._jobs_row('{0}'.format(r.count),
-                                           '{0:.1f}'.format(r.min_duration),
-                                           '{0:.1f}'.format(r.max_duration),
-                                           '{0:.1f}'.format(r.avg_duration),
+                                           '{0:.0f}ms'.format(r.min_duration),
+                                           '{0:.0f}ms'.format(r.max_duration),
+                                           '{0:.0f}ms'.format(r.avg_duration),
                                            r.stmt) for r in jobs]
         else:
             self.logs[:] = []
 
     def _jobs_row(self, count, min, max, avg, stmt):
         return urwid.Columns([
-            (10, urwid.Text([('default', count)])),
-            (10, urwid.Text([('text_green', min)])),
-            (10, urwid.Text([('text_red', max)])),
-            (10, urwid.Text([('text_yellow', avg)])),
             urwid.Text(stmt),
+            (10, urwid.Text([('default', count)], align='right')),
+            (10, urwid.Text([('text_green', min)], align='right')),
+            (10, urwid.Text([('text_yellow', avg)], align='right')),
+            (10, urwid.Text([('text_red', max)], align='right')),
         ], dividechars=1)
 
     def set_logging_state(self, enabled):
-        state = enabled and ('text_green', b'ON') or ('text_red', b'OFF')
+        state = enabled and ('health_green', b'ON') or ('health_red', b'OFF')
         self.logging_state.set_text([
-            ('headline', b'Job Logging'),
-            ('default', b' '),
+            ('headline', b'Job Logging '),
             state
         ])
 
@@ -197,7 +215,10 @@ class CrateTopWindow(urwid.WidgetWrap):
         self.disk_widget.set_data(disk)
         self.net_io_widget.set_data(net_io)
         self.disk_io_widget.set_data(disk_io)
-        self.t_load.set_text('Load: {0:.2f}/{1:.2f}/{2:.2f}'.format(*load))
+        self.t_load.set_text([
+            ('default', 'Load:    '),
+            ('headline', '{0:.2f}/{1:.2f}/{2:.2f}'.format(*load)),
+        ])
 
     def _data_disks(self, data):
         data_disks = [disk['dev'] for disk in data['data']]
@@ -221,20 +242,26 @@ class CrateTopWindow(urwid.WidgetWrap):
 
     def update_info(self, info=None):
         if info is None:
-            self.t_cluster_name.set_text(["Cluster: ", ('text_red', '---')])
-            self.t_version.set_text(["Version: ", ('text_red', '---')])
-        else:
             self.t_cluster_name.set_text([
                 "Cluster: ",
-                ('inverted', info['cluster_name']),
+                ('text_red', '---')
             ])
             self.t_version.set_text([
                 "Version: ",
-                ('inverted', info['version']['number']),
+                ('text_red', '---')
+            ])
+        else:
+            self.t_cluster_name.set_text([
+                "Cluster: ",
+                ('headline', info['cluster_name']),
+            ])
+            self.t_version.set_text([
+                "Version: ",
+                ('headline', info['version']['number']),
             ])
 
     def update_footer(self, hosts):
-        self.t_hosts.set_text(['Connected to: ', ('inverted', ' '.join(hosts))])
+        self.t_hosts.set_text(['Hosts:   ', ('headline', ' '.join(hosts))])
 
     def handle_input(self, key):
         if key == '1':
