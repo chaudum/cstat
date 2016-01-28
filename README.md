@@ -27,9 +27,8 @@ optional arguments:
 
 ## Hotkeys
 
-- `1` ... toggle detail bars for `CPU`, `PROC`, `MEM`, `HEAP`
+- `1` ... toggle detail bars for `CPU`, `PROC`, `MEM`, `HEAP`, `DISK`
 - `2` ... toggle detail bars for `NET I/O`, `DISK I/O`
-- `3` ... toggle defail bars for `DISK`
 - `f1` ... enable/disable job logging (this also sets the `stats.jobs_log` cluster setting)
 
 ## Todo

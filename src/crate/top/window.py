@@ -70,6 +70,7 @@ class CrateTopWindow(urwid.WidgetWrap):
                 urwid.Pile([
                     self.cpu_widget,
                     self.process_widget,
+                    self.disk_widget,
                 ]),
                 urwid.Pile([
                     self.memory_widget,
@@ -85,8 +86,6 @@ class CrateTopWindow(urwid.WidgetWrap):
                     self.disk_io_widget,
                 ]),
             ], dividechars=3),
-            urwid.Divider(),
-            self.disk_widget,
             urwid.Divider(),
             urwid.Pile([
                 self.logging_state,
@@ -241,10 +240,9 @@ class CrateTopWindow(urwid.WidgetWrap):
             self.process_widget.toggle_details()
             self.memory_widget.toggle_details()
             self.heap_widget.toggle_details()
+            self.disk_widget.toggle_details()
         elif key == '2':
             self.net_io_widget.toggle_details()
             self.disk_io_widget.toggle_details()
-        elif key == '3':
-            self.disk_widget.toggle_details()
         else:
             LOGGER.warn('Unhandled input:', key)
