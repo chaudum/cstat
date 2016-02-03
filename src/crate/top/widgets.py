@@ -75,7 +75,7 @@ class AbstractBar(BarWidgetBase):
 class HorizontalBar(AbstractBar):
 
     def set_progress(self, current=0.0, total=100.0):
-        self.progress = current / total
+        self.progress = total > 0 and current / total or 0.0
         self.current = current
         self.total = total
         self._invalidate()
