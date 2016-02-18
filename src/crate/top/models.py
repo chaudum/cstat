@@ -26,6 +26,7 @@ import sys
 import json
 import urwid
 import urllib3
+from distutils.version import StrictVersion
 from time import mktime
 from datetime import datetime, timedelta
 from collections import namedtuple
@@ -36,11 +37,15 @@ from .logging import ColorLog
 LOGGER = ColorLog(__name__)
 
 
+CRATE_055 = StrictVersion('0.55')
+
 class ModelBase(object):
 
     def __init__(self, hosts=[]):
         self.hosts = hosts
-        self.cursor = connect(self.hosts).cursor()
+        conn = connect(self.hosts)
+        self.server_version = conn.lowest_server_version
+        self.cursor = conn.cursor()
         self.http = urllib3.PoolManager(3)
         self.last_update = datetime.now()
 
@@ -72,6 +77,19 @@ class JobsModel(ModelBase):
         LIMIT ?
     """.strip('\n '))
 
+    QUERY_LT_055 = re.sub('\n|\s+', ' ', """
+        SELECT regexp_matches(stmt, '^(\w+).*')[1] as stmt,
+               min(ended - started) as min_duration,
+               max(ended - started) as max_duration,
+               avg(ended - started) as avg_duration,
+               count(*) as count
+        FROM sys.jobs_log
+        WHERE ended > ? AND error IS NULL
+        GROUP BY stmt
+        ORDER BY count DESC
+        LIMIT ?
+    """.strip('\n '))
+
     def __init__(self, hosts=[]):
         super(JobsModel, self).__init__(hosts)
         try:
@@ -81,13 +99,17 @@ class JobsModel(ModelBase):
 
 
     def get_initial_state(self):
-        res = self.sql("""SELECT settings['stats']['enabled'] as enabled FROM sys.cluster""")
+        res = self.sql("""SELECT settings['stats']['enabled'] as enabled
+                          FROM sys.cluster""")
         return res[0].enabled
 
     def refresh(self):
-        ts = int(mktime((datetime.now() - timedelta(seconds=self.RANGE)).timetuple()) * 1000)
+        ts = int(mktime(
+            (datetime.now() - timedelta(seconds=self.RANGE)).timetuple()
+        ) * 1000)
         self.last_update = datetime.now()
-        return self.sql(self.QUERY, (ts, self.LIMIT, ))
+        query = self.server_version < CRATE_055 and self.QUERY_LT_055 or self.QUERY
+        return self.sql(query, (ts, self.LIMIT, ))
 
     def toggle(self):
         LOGGER.info(self.enabled and 'Disable' or 'Enable', 'jobs logging')
