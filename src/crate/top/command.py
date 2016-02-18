@@ -25,12 +25,12 @@ import sys
 import urwid
 import argparse
 import traceback
-from .logging import ColorLog
+from .logging import CrateTopLog
 from .models import GraphModel, NodesModel, JobsModel
 from .window import CrateTopWindow
 
 
-LOGGER = ColorLog(__name__)
+LOGGER = CrateTopLog.getLogger(__name__)
 
 
 class CrateTop(object):
@@ -64,9 +64,7 @@ class CrateTop(object):
         if self.exit_message:
             print(self.exit_message, file=sys.stderr)
         elif ex:
-            LOGGER.error(ex.__name__, msg)
-            for line in traceback.format_tb(trace):
-                print(line, file=sys.stderr)
+            LOGGER.error(msg, exc_info=True)
 
     def quit(self, msg=None):
         self.exit_message = msg
