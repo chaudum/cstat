@@ -47,6 +47,7 @@ class CrateTopWindow(urwid.WidgetWrap):
         ('text_red', 'dark red', 'default'),
         ('tx', 'dark cyan', 'default'),
         ('rx', 'dark magenta', 'default'),
+        ('thead', 'black', 'light cyan'),
     ]
 
     def __init__(self, controller):
@@ -115,8 +116,14 @@ class CrateTopWindow(urwid.WidgetWrap):
             urwid.Divider(),
             urwid.Pile([
                 self.logging_state,
-                urwid.Divider(),
-                self._jobs_row('Count', 'Min', 'Max', 'Avg', 'Statement Type'),
+                urwid.AttrMap(
+                    urwid.Columns([
+                        urwid.Text('Statement Type'),
+                        (10, urwid.Text('Count', align='right')),
+                        (10, urwid.Text('Min', align='right')),
+                        (10, urwid.Text('Avg', align='right')),
+                        (10, urwid.Text('Max', align='right')),
+                    ], dividechars=1), 'thead'),
                 urwid.BoxAdapter(urwid.ListBox(self.logs), height=10),
             ]),
         ])
