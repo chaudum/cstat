@@ -28,9 +28,6 @@ class CrateTopException(Exception):
     pass
 
 
-class ProgrammingError(CrateTopException):
-    pass
-
 class AbstractMethodNotImplemented(CrateTopException):
     """
     Exception that is raised whenever a method that must be implemented

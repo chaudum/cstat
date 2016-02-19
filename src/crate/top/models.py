@@ -32,9 +32,9 @@ from datetime import datetime, timedelta
 from collections import namedtuple
 from urllib3.exceptions import MaxRetryError
 from crate.client import connect
-from .logging import CrateTopLog
+from .logging import ColorLog
 
-LOGGER = CrateTopLog.getLogger(__name__)
+LOGGER = ColorLog(__name__)
 
 
 CRATE_055 = StrictVersion('0.55')

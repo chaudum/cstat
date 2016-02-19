@@ -20,25 +20,31 @@
 # with Crate these terms will supersede the license and you may use the
 # software solely pursuant to the terms of the relevant commercial agreement.
 
-import logging
-from logging.handlers import SysLogHandler
-from .exceptions import ProgrammingError
+from __future__ import print_function
+
+from datetime import datetime
+from colorama import Fore, Style
 
 
-class CrateTopLog(object):
+class ColorLog(object):
 
     def __init__(self, name):
-        raise ProgrammingError("""{0} is a utility wrapper for Python's
-        logging module. Please use `{0}.getLogger(name)` to obtain a logger
-        instance.""".format(self.__class__.__name__))
+        self.name = name
+        self.stream = open('ctop.log', 'a')
 
-    @staticmethod
-    def getLogger(name, level=logging.INFO):
-        """ Return new logger instance with global config """
-        sysLog = SysLogHandler()
-        sysLog.setLevel(level)
-        logger = logging.getLogger(name)
-        logger.setLevel(logging.DEBUG)
-        logger.addHandler(sysLog)
-        return logger
+    def _print(self, color, level, *args):
+        msg = '[{1} {5} {0:<20}] {3}{2}{4}'.format(self.name, level,
+            ' '.join([str(x) for x in args]), color, Style.RESET_ALL,
+            datetime.now().isoformat())
+        print(msg, file=self.stream)
+        self.stream.flush()
+
+    def info(self, *args):
+        self._print(Fore.GREEN, 'I', *args)
+
+    def warn(self, *args):
+        self._print(Fore.YELLOW, 'W', *args)
+
+    def error(self, *args):
+        self._print(Fore.RED, 'E', *args)
 

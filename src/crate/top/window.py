@@ -22,7 +22,7 @@
 
 
 import urwid
-from .logging import CrateTopLog
+from .logging import ColorLog
 from .widgets import (
     MultiBarWidget,
     HorizontalPercentBar,
@@ -31,7 +31,7 @@ from .widgets import (
     IOBar,
 )
 
-LOGGER = CrateTopLog.getLogger(__name__)
+LOGGER = ColorLog(__name__)
 
 
 class CrateTopWindow(urwid.WidgetWrap):
