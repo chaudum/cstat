@@ -22,29 +22,43 @@
 
 from __future__ import print_function
 
+from os import path, mkdir
 from datetime import datetime
 from colorama import Fore, Style
-
 
 class ColorLog(object):
 
     def __init__(self, name):
         self.name = name
-        self.stream = open('ctop.log', 'a')
+        self.stream = open(path.join(self.logdir(), 'ctop.log'), 'a')
+
+    def __del__(self):
+        self.stream.close()
+
+    def logdir(self):
+        dir = path.expanduser(path.join('~', '.ctop'))
+        if not path.exists(dir):
+            mkdir(dir)
+        return dir
 
     def _print(self, color, level, *args):
-        msg = '[{1} {5} {0:<20}] {3}{2}{4}'.format(self.name, level,
-            ' '.join([str(x) for x in args]), color, Style.RESET_ALL,
-            datetime.now().isoformat())
+        msg = '[{0}]{4}[{1:<5}]{5}[{2:<20}] {3}'.format(
+                datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S'),
+                level,
+                self.name,
+                ' '.join([str(x) for x in args]),
+                color,
+                Style.RESET_ALL,
+                )
         print(msg, file=self.stream)
         self.stream.flush()
 
     def info(self, *args):
-        self._print(Fore.GREEN, 'I', *args)
+        self._print(Fore.GREEN, 'INFO', *args)
 
     def warn(self, *args):
-        self._print(Fore.YELLOW, 'W', *args)
+        self._print(Fore.YELLOW, 'WARN', *args)
 
     def error(self, *args):
-        self._print(Fore.RED, 'E', *args)
+        self._print(Fore.RED, 'ERROR', *args)
 
