@@ -35,9 +35,8 @@ from crate.client import connect
 from .logging import ColorLog
 
 LOGGER = ColorLog(__name__)
-
-
 CRATE_055 = StrictVersion('0.55')
+
 
 class ModelBase(object):
 
