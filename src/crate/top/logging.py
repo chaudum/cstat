@@ -26,6 +26,7 @@ from os import path, mkdir
 from datetime import datetime
 from colorama import Fore, Style
 
+
 class ColorLog(object):
 
     def __init__(self, name):
@@ -52,6 +53,9 @@ class ColorLog(object):
                 )
         print(msg, file=self.stream)
         self.stream.flush()
+
+    def debug(self, *args):
+        self._print(Fore.CYAN, 'DEBUG', *args)
 
     def info(self, *args):
         self._print(Fore.GREEN, 'INFO', *args)
