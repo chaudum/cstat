@@ -39,6 +39,10 @@ CRATE_055 = StrictVersion('0.55')
 
 
 class ModelBase(object):
+    """
+    Base for all models that execute SQL statements against connected Crate
+    cluster to get their data.
+    """
 
     def __init__(self, hosts=[]):
         self.hosts = hosts
@@ -59,6 +63,10 @@ class ModelBase(object):
 
 
 class JobsModel(ModelBase):
+    """
+    Model that holds min/max/avg of last executed statements in the Crate
+    cluster.
+    """
 
     RANGE = 60 #seconds
     LIMIT = 5
@@ -120,6 +128,9 @@ class JobsModel(ModelBase):
 
 
 class NodesModel(ModelBase):
+    """
+    Model that holds various metrics of all nodes of the Crate cluster.
+    """
 
     QUERY = re.sub('\n|\s+', ' ', """
         SELECT id,

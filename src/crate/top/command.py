@@ -34,6 +34,9 @@ LOGGER = ColorLog(__name__)
 
 
 class CrateTop(object):
+    """
+    Main entry point of application
+    """
 
     REFRESH_INTERVAL = 2.0
 
@@ -109,8 +112,7 @@ def parse_cli():
     """
     Parse command line arguments
     """
-    def splitter(input):
-        return input.split(',')
+    splitter = lambda x: x.split(',')
     parser = argparse.ArgumentParser('CrateTop')
     parser.add_argument('--hosts', '--crate-hosts',
                         help='Comma separated list of Crate hosts to connect to.',
@@ -124,6 +126,6 @@ def main():
     Instantiate CrateTop and run its main loop by calling the instance.
     """
     args = parse_cli()
-    with CrateTop(args.hosts) as top:
+    with CrateTop(hosts=args.hosts) as top:
         top()
 
