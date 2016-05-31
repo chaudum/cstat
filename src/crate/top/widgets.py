@@ -129,7 +129,7 @@ class MultiBarWidget(urwid.Pile):
             self.bar,
             self.details,
         ]
-        self._last_value = []
+        self._history = []
         super(MultiBarWidget, self).__init__(widgets)
 
     def toggle_details(self):
@@ -137,7 +137,7 @@ class MultiBarWidget(urwid.Pile):
             self.details.contents = []
         else:
             bars = []
-            for value in self._last_value:
+            for value in self._history:
                 bar = self.bar_cls(value[2], value[0], value[1],
                                    symbol=BarWidgetBase.STAR)
                 bars.append((bar, ('pack', None)))
@@ -148,7 +148,7 @@ class MultiBarWidget(urwid.Pile):
         return (sum([x[0] for x in values]), sum([x[1] for x in values]))
 
     def set_data(self, values=[]):
-        self._last_value = values
+        self._history = values
         self.bar.set_progress(*self.sum(values))
         num = len(self.details.contents) - 1
         if num == 0:
@@ -222,37 +222,37 @@ class IOStatWidget(MultiBarWidget):
             self.details.contents = []
         else:
             bars = []
-            for ts, packets, name in self._last_value:
+            for ts, packets, name in self._history:
                 bar = self.bar_cls(name, suffix=self.suffix)
                 bars.append((bar, ('pack', None)))
             bars.append((urwid.Divider(), ('pack', None)))
             self.details.contents = bars
 
     def set_data(self, values=[]):
-        if len(self._last_value):
+        if len(self._history):
             tx_total = 0.0
             rx_total = 0.0
+            ## TODO: if details are not shown - no total is calculated!
             for idx, bar in enumerate(self.details.contents):
                 if idx < len(values):
-                    if self._last_value[idx][0] >= values[idx][0]:
+                    if self._history[idx][0] >= values[idx][0]:
                         tx, rx = bar[0].tx, bar[0].rx
                     else:
-                        tx, rx = self._calculate(values[idx], self._last_value[idx])
+                        tx, rx = self._calculate(values[idx], self._history[idx])
                     tx_total += tx
                     rx_total += rx
                     bar[0].set_progress(tx, rx)
                 else:
                     self.details.contents.remove(bar)
             self.bar.set_progress(tx_total, rx_total)
-        self._last_value = values
+        self._history= values
 
     def _calculate(self, value, last_value):
-        last_timestamp, last_packets, last_name = last_value
-        timestamp, packets, name = value
-        assert last_name == name
-        diff = (timestamp - last_timestamp) / 1000.0
-        assert diff > 0
-        tx = (packets['tx'] - last_packets['tx']) / diff
-        rx = (packets['rx'] - last_packets['rx']) / diff
+        prev_timestamp, prev_values, prev_name = last_value
+        timestamp, values, name = value
+        assert prev_name == name
+        diff = (timestamp - prev_timestamp) / 1000.0
+        tx = (values['tx'] - prev_values['tx']) / diff
+        rx = (values['rx'] - prev_values['rx']) / diff
         return tx, rx
 
