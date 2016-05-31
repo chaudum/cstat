@@ -127,6 +127,7 @@ class NodesModel(ModelBase):
                hostname,
                format('%s:%d', hostname, port['http']) as host,
                os['cpu'] as cpu,
+               os['timestamp'] as hosttime,
                process['cpu'] as process,
                os_info['available_processors'] as cpus,
                load,

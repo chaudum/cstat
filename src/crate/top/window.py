@@ -216,7 +216,7 @@ class CrateTopWindow(urwid.WidgetWrap):
                 node.name,
             ])
             disk_io.append([
-                node.net_timestamp,
+                node.hosttime,
                 self.calculate_disk_io(node.fs),
                 node.name,
             ])
