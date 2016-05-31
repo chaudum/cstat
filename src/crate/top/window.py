@@ -33,6 +33,16 @@ from .widgets import (
 
 LOGGER = ColorLog(__name__)
 
+border = dict(
+    tlcorner = '\u2554',
+    tline = '\u2550',
+    lline = '\u2551',
+    trcorner = '\u2557',
+    blcorner = '\u255a',
+    rline = '\u2551',
+    bline = '\u2550',
+    brcorner = '\u255d',
+)
 
 class CrateTopWindow(urwid.WidgetWrap):
 
@@ -72,22 +82,25 @@ class CrateTopWindow(urwid.WidgetWrap):
         self.t_hosts = urwid.Text(b'-')
         self.t_handler = urwid.Text(b'-')
 
-        header = urwid.Columns([
-            (10, urwid.Pile([
-                urwid.Text(b'Cluster'),
-                urwid.Text(b'Version'),
-                urwid.Text(b'Load'),
-                urwid.Text(b'Handler'),
-                urwid.Text(b'Hosts'),
-            ])),
-            urwid.AttrMap(urwid.Pile([
-                self.t_cluster_name,
-                self.t_version,
-                self.t_load,
-                self.t_handler,
-                self.t_hosts,
-            ]), 'headline'),
-        ])
+        header = urwid.LineBox(
+            urwid.Columns([
+                (10, urwid.Pile([
+                    urwid.Text(b'Cluster'),
+                    urwid.Text(b'Version'),
+                    urwid.Text(b'Load'),
+                    urwid.Text(b'Handler'),
+                    urwid.Text(b'Hosts'),
+                ])),
+                urwid.AttrMap(urwid.Pile([
+                    self.t_cluster_name,
+                    self.t_version,
+                    self.t_load,
+                    self.t_handler,
+                    self.t_hosts,
+                ]), 'headline'),
+            ]),
+            **border
+        )
 
         self.body = urwid.Pile([
             urwid.Divider(),
