@@ -189,9 +189,10 @@ class CrateTopWindow(urwid.WidgetWrap):
         load = [0.0, 0.0, 0.0]
         num = float(len(data))
         for node in data:
+            used = node.cpu['system'] + node.cpu['user'] + node.cpu['stolen']
             cpu.append([
-                min(node.cpu['used'], 100),
-                min(node.cpu['used'] + node.cpu['idle'], 100),
+                min(used, 100),
+                min(used + node.cpu['idle'], 100),
                 node.name,
             ])
             process.append([
