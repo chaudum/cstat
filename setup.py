@@ -26,10 +26,11 @@ import sys
 from setuptools import setup, find_packages
 
 requirements = [
-    'urwid',
+    'appdirs',
     'crate',
     'colorama',
     'setuptools',
+    'urwid',
 ]
 
 setup(

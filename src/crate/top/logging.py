@@ -22,9 +22,10 @@
 
 from __future__ import print_function
 
-from os import path, mkdir
+from os import path, makedirs
 from datetime import datetime
 from colorama import Fore, Style
+from appdirs import user_log_dir
 
 
 class ColorLog(object):
@@ -37,9 +38,9 @@ class ColorLog(object):
         self.stream.close()
 
     def logdir(self):
-        dir = path.expanduser(path.join('~', '.ctop'))
+        dir = user_log_dir('ctop', 'crate')
         if not path.exists(dir):
-            mkdir(dir)
+            makedirs(dir)
         return dir
 
     def _print(self, color, level, *args):
