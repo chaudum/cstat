@@ -41,6 +41,6 @@ optional arguments:
 - [x] display disk i/o
 - [x] display network i/o
 - [x] display node names in detail views
-- [ ] use multiprocessing to perform http requests
-- [ ] coloring of i/o stats
+- [ ] use asyncio to perform http requests
+- [x] coloring of i/o stats
 - [ ] responsive i/o widget
