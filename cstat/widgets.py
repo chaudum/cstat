@@ -22,44 +22,32 @@
 
 import urwid
 from datetime import datetime
-from .exceptions import AbstractMethodNotImplemented
 from .utils import byte_size
 
 
 class BarWidgetBase(urwid.Text):
 
-    START = b'['
-    END = b']'
+    START = '['
+    END   = ']'
 
-    STAR = b'*'
-    EQUI = b'='
-    PIPE = b'|'
+    STAR = '*'
+    EQUI = '='
+    PIPE = '|'
 
     def __init__(self, label, symbol):
-        self.label = '{0:<10}'.format(label[:9]).encode('utf-8')
+        self.label = '{0:<10}'.format(label[:9])
         self.symbol = symbol
-        super(BarWidgetBase, self).__init__(self.label)
+        super().__init__(self.label)
 
     def rows(self, size, focus=False):
         return 1
 
 
-class AbstractBar(BarWidgetBase):
+class HorizontalBar(BarWidgetBase):
 
     def __init__(self, label, current=0.0, total=100.0, symbol=BarWidgetBase.PIPE):
-        super(AbstractBar, self).__init__(label, symbol)
+        super().__init__(label, symbol)
         self.set_progress(current, total)
-
-    def set_progress(self, current=0.0, total=100.0):
-        raise AbstractMethodNotImplemented(self.__class__,
-                                           self.set_progress.__name__)
-
-    def progress_text(self):
-        raise AbstractMethodNotImplemented(self.__class__,
-                                           self.progress_text.__name__)
-
-
-class HorizontalBar(AbstractBar):
 
     def set_progress(self, current=0.0, total=100.0):
         self.progress = total > 0 and current / total or 0.0
@@ -80,28 +68,28 @@ class HorizontalBar(AbstractBar):
         steps = maxcol - 2 - label_len
         chars = round(float(steps) * self.progress)
         bar = self.symbol * chars
-        text = self.progress_text().encode('utf-8')
-        base = bar + b' ' * (steps - chars)
+        text = self.progress_text()
+        base = bar + ' ' * (steps - chars)
         base = base[:len(base)-len(text)] + text
         line_attr = [('default', label_len + 1)]
         if chars:
             line_attr += [(self.color(), chars)]
         line_attr += [('default', 1 + steps - chars)]
-        return urwid.TextCanvas([self.label + self.START + base + self.END],
-                                attr=[line_attr],
-                                maxcol=maxcol)
+        lines = [self.label + self.START + base + self.END]
+        return urwid.TextCanvas([l.encode('utf-8') for l in lines],
+                                attr=[line_attr], maxcol=maxcol)
 
 
 class HorizontalPercentBar(HorizontalBar):
 
     def progress_text(self):
-        return '{0:.1%}'.format(self.progress)
+        return '{:.1%}'.format(self.progress)
 
 
 class HorizontalBytesBar(HorizontalBar):
 
     def progress_text(self):
-        return '{0}/{1}'.format(byte_size(self.current), byte_size(self.total))
+        return byte_size(self.current) + '/' + byte_size(self.total)
 
 
 class MultiBarWidget(urwid.Pile):
@@ -116,7 +104,7 @@ class MultiBarWidget(urwid.Pile):
             self.details,
         ]
         self._history = []
-        super(MultiBarWidget, self).__init__(widgets)
+        super().__init__(widgets)
 
     def toggle_details(self):
         if len(self.details.contents):
@@ -147,16 +135,17 @@ class MultiBarWidget(urwid.Pile):
                 self.details.contents.remove(bar)
 
 
-class IOBar(AbstractBar):
+class IOBar(BarWidgetBase):
     """
     Tx ... sent/written/outbound
     Rx ... received/read/inbound
     """
 
     def __init__(self, label, suffix='p/s'):
+        super().__init__(label, 'x')
         self.tpl = '{0}: {1:>10}'
         self.suffix = suffix
-        super(IOBar, self).__init__(label, 0.0, 0.0, symbol=b'x')
+        self.set_progress(0.0, 0.0)
 
     def set_progress(self, tx=0.0, rx=0.0):
         self.tx = tx
@@ -190,14 +179,15 @@ class IOBar(AbstractBar):
             ('rx', 14),
             ('default', 2),
         ]
-        text = self.label + self.START + text.encode('utf-8') + self.END
-        return urwid.TextCanvas([text], attr=[line_attr], maxcol=maxcol)
+        lines = [self.label + self.START + text + self.END]
+        return urwid.TextCanvas([l.encode('utf-8') for l in lines],
+                                attr=[line_attr], maxcol=maxcol)
 
 
 class IOStatWidget(MultiBarWidget):
 
     def __init__(self, title, suffix):
-        super(IOStatWidget, self).__init__(title, bar_cls=IOBar, suffix=suffix)
+        super().__init__(title, bar_cls=IOBar, suffix=suffix)
         self.suffix = suffix
 
     def toggle_details(self):

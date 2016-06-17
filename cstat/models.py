@@ -32,9 +32,7 @@ from datetime import datetime, timedelta
 from collections import namedtuple
 from urllib3.exceptions import MaxRetryError
 from crate.client import connect
-from .logging import ColorLog
 
-LOGGER = ColorLog(__name__)
 CRATE_055 = StrictVersion('0.55')
 
 
@@ -119,7 +117,6 @@ class JobsModel(ModelBase):
         return self.sql(query, (ts, self.LIMIT, ))
 
     def toggle(self):
-        LOGGER.info(self.enabled and 'Disable' or 'Enable', 'jobs logging')
         self.set_stats_enabled(not self.enabled)
         self.enabled = not self.enabled
 
