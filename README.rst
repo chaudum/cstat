@@ -35,12 +35,17 @@ Usage
 After installation the program can be invoked by the following command::
 
     >>> cstat --help
-    usage: cstat [-h] [--hosts HOSTS]
+    usage: cstat [-h] [--hosts HOST [HOST ...]] [--interval INTERVAL] [--version]
+
+    A visual stat tool for Crate clusters
 
     optional arguments:
       -h, --help            show this help message and exit
-      --hosts HOSTS, --crate-hosts HOSTS
-                            Comma separated list of Crate hosts to connect to.
+      --hosts HOST [HOST ...], --crate-hosts HOST [HOST ...]
+                            one or more Crate hosts to connect to
+      --interval INTERVAL, --refresh-interval INTERVAL
+                            amount of time in seconds between each update
+      --version             show program's version number and exit
 
 Hotkeys
 =======

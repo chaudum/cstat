@@ -30,19 +30,22 @@ from .window import MainWindow
 from urwid.raw_display import Screen
 
 
+__version__ = '0.1.0'
+
+
 class CrateStat(object):
     """
     Main entry point of application
     """
 
-    REFRESH_INTERVAL = 2.0
-
-    def __init__(self, hosts=[]):
+    def __init__(self, interval, hosts=[]):
         self.models = [
             GraphModel(hosts),
             NodesModel(hosts),
             JobsModel(hosts),
         ]
+        # don't allow refresh intervals < 100ms
+        self.refresh_interval = max(0.1, interval)
         self.view = MainWindow(self)
         self.view.update_footer(hosts)
         self.loop = None
@@ -102,19 +105,24 @@ class CrateStat(object):
             self.quit(e)
         else:
             self.view.update(info, nodes, jobs)
-        loop.set_alarm_in(self.REFRESH_INTERVAL, self.fetch)
+        loop.set_alarm_in(self.refresh_interval, self.fetch)
 
 
 def parse_cli():
     """
     Parse command line arguments
     """
-    splitter = lambda x: x.split(',')
-    parser = argparse.ArgumentParser('CrateTop')
+    parser = argparse.ArgumentParser('cstat',
+                                     description='A visual stat tool for Crate clusters')
     parser.add_argument('--hosts', '--crate-hosts',
-                        help='Comma separated list of Crate hosts to connect to.',
-                        default='localhost:4200',
-                        type=splitter)
+                        help='one or more Crate hosts to connect to',
+                        type=str, nargs='+', metavar='HOST',
+                        default=['localhost:4200'])
+    parser.add_argument('--interval', '--refresh-interval',
+                        help='amount of time in seconds between each update',
+                        default=2,
+                        type=float)
+    parser.add_argument('--version', action='version', version=__version__)
     return parser.parse_args()
 
 
@@ -122,7 +130,7 @@ def main():
     """
     Instantiate CrateTop and run its main loop by calling the instance.
     """
-    args = parse_cli()
-    with CrateStat(hosts=args.hosts) as top:
-        top.main()
+    cla = parse_cli()
+    with CrateStat(cla.interval, hosts=cla.hosts) as stat:
+        stat.main()
 

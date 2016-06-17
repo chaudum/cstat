@@ -33,7 +33,6 @@ def readme():
 
 setup(
     name='cstat',
-    version='0.1.0',
     author='Christian Haudum',
     author_email='christian.haudum@crate.io',
     url='https://github.com/chaudum/crate-top',
