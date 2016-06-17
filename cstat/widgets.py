@@ -23,20 +23,7 @@
 import urwid
 from datetime import datetime
 from .exceptions import AbstractMethodNotImplemented
-
-
-class ByteSizeFormat(object):
-
-    FMT_TEMPLATE = '{0:.1f}{1}{2}'
-    SIZES = ['', 'K', 'M', 'G', 'T', 'P', 'E', 'Z']
-
-    @classmethod
-    def format(cls, num, suffix='b'):
-        for unit in cls.SIZES:
-            if abs(num) < 10240:
-                return cls.FMT_TEMPLATE.format(num, unit, suffix)
-            num /= 1024.0
-        return cls.FMT_TEMPLATE.format(num, 'Y', suffix)
+from .utils import byte_size
 
 
 class BarWidgetBase(urwid.Text):
@@ -114,8 +101,7 @@ class HorizontalPercentBar(HorizontalBar):
 class HorizontalBytesBar(HorizontalBar):
 
     def progress_text(self):
-        return '{0}/{1}'.format(ByteSizeFormat.format(self.current),
-                                ByteSizeFormat.format(self.total))
+        return '{0}/{1}'.format(byte_size(self.current), byte_size(self.total))
 
 
 class MultiBarWidget(urwid.Pile):
@@ -193,11 +179,9 @@ class IOBar(AbstractBar):
         if var < 1:
             raise AssertionError('IOBar requires a minimum width of 43 columns!')
         text = ' '
-        text += self.tpl.format('Tx',
-                ByteSizeFormat.format(self.tx, suffix=self.suffix))
+        text += self.tpl.format('Tx', byte_size(self.tx, suffix=self.suffix))
         text += ' ' * var
-        text += self.tpl.format('Rx',
-                ByteSizeFormat.format(self.rx, suffix=self.suffix))
+        text += self.tpl.format('Rx', byte_size(self.rx, suffix=self.suffix))
         text += ' '
         line_attr = [
             ('default', 12),
@@ -206,9 +190,8 @@ class IOBar(AbstractBar):
             ('rx', 14),
             ('default', 2),
         ]
-        return urwid.TextCanvas([self.label + self.START + text.encode('utf-8') + self.END],
-                                attr=[line_attr],
-                                maxcol=maxcol)
+        text = self.label + self.START + text.encode('utf-8') + self.END
+        return urwid.TextCanvas([text], attr=[line_attr], maxcol=maxcol)
 
 
 class IOStatWidget(MultiBarWidget):
