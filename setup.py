@@ -32,30 +32,29 @@ def readme():
 
 
 setup(
-    name='crate-top',
+    name='cstat',
     version='0.1.0',
     author='Christian Haudum',
     author_email='christian.haudum@crate.io',
     url='https://github.com/chaudum/crate-top',
-    description='A top for Crate',
+    description='A visual stat tool for Crate clusters',
     long_description=readme(),
-    package_dir={'': 'src'},
     platforms=['any'],
     license='Apache License 2.0',
-    packages=find_packages('src'),
-    namespace_packages=['crate'],
+    packages=['cstat'],
     entry_points={
         'console_scripts': [
-            'ctop = crate.top.command:main',
+            'cstat = cstat.command:main',
         ]
     },
     install_requires=[
         'appdirs',
         'crate',
         'colorama',
-        'setuptools',
         'urwid',
     ],
+    setup_requires=['setuptools_scm'],
+    user_scm_version=True,
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
