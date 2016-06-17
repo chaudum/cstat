@@ -34,6 +34,9 @@ class BarWidgetBase(urwid.Text):
     EQUI = '='
     PIPE = '|'
 
+    WATERMARK_LOW  = 0.80
+    WATERMARK_HIGH = 0.95
+
     def __init__(self, label, symbol):
         self.label = '{0:<10}'.format(label[:9])
         self.symbol = symbol
@@ -56,9 +59,9 @@ class HorizontalBar(BarWidgetBase):
         self._invalidate()
 
     def color(self):
-        if self.progress < 0.8:
+        if self.progress < self.WATERMARK_LOW:
             return 'text_green'
-        elif self.progress < 0.95:
+        elif self.progress < self.WATERMARK_HIGH:
             return 'text_yellow'
         return 'text_red'
 
@@ -75,9 +78,10 @@ class HorizontalBar(BarWidgetBase):
         if chars:
             line_attr += [(self.color(), chars)]
         line_attr += [('default', 1 + steps - chars)]
-        lines = [self.label + self.START + base + self.END]
-        return urwid.TextCanvas([l.encode('utf-8') for l in lines],
-                                attr=[line_attr], maxcol=maxcol)
+        line = self.label + self.START + base + self.END
+        return urwid.TextCanvas([line.encode('utf-8'), ],
+                                attr=[line_attr],
+                                maxcol=maxcol)
 
 
 class HorizontalPercentBar(HorizontalBar):
@@ -89,7 +93,7 @@ class HorizontalPercentBar(HorizontalBar):
 class HorizontalBytesBar(HorizontalBar):
 
     def progress_text(self):
-        return byte_size(self.current) + '/' + byte_size(self.total)
+        return '{}/{}'.format(byte_size(self.current), byte_size(self.total))
 
 
 class MultiBarWidget(urwid.Pile):
@@ -97,7 +101,7 @@ class MultiBarWidget(urwid.Pile):
     def __init__(self, title, bar_cls=HorizontalPercentBar, **bar_options):
         self.title = title
         self.bar_cls = bar_cls
-        self.bar = bar_cls(title, **bar_options)
+        self.bar = bar_cls('', **bar_options)
         self.details = urwid.Pile([])
         widgets = [
             self.bar,
@@ -110,13 +114,16 @@ class MultiBarWidget(urwid.Pile):
         if len(self.details.contents):
             self.details.contents = []
         else:
-            bars = []
-            for value in self._history:
-                bar = self.bar_cls(value[2], value[0], value[1],
-                                   symbol=BarWidgetBase.STAR)
-                bars.append((bar, ('pack', None)))
-            bars.append((urwid.Divider(), ('pack', None)))
-            self.details.contents = bars
+            self.append_node_bars()
+
+    def append_node_bars(self):
+        bars = []
+        for value in self._history:
+            bar = self.bar_cls(value[2], value[0], value[1],
+                               symbol=BarWidgetBase.STAR)
+            bars.append((bar, ('pack', None)))
+        self.details.contents = bars
+        return len(bars)
 
     def sum(self, values=[]):
         return (sum([x[0] for x in values]), sum([x[1] for x in values]))
@@ -124,15 +131,11 @@ class MultiBarWidget(urwid.Pile):
     def set_data(self, values=[]):
         self._history = values
         self.bar.set_progress(*self.sum(values))
-        num = len(self.details.contents) - 1
-        if num == 0:
-            return
-        for idx in range(num):
-            bar = self.details.contents[idx]
-            if idx < len(values):
-                bar[0].set_progress(*values[idx][:2])
-            else:
-                self.details.contents.remove(bar)
+        if len(self.details.contents) and \
+                self.append_node_bars():
+            for idx, widget in enumerate(self.details.contents):
+                bar = widget[0]
+                bar.set_progress(*values[idx][:2])
 
 
 class IOBar(BarWidgetBase):
@@ -143,7 +146,7 @@ class IOBar(BarWidgetBase):
 
     def __init__(self, label, suffix='p/s'):
         super().__init__(label, 'x')
-        self.tpl = '{0}: {1:>10}'
+        self.tpl = '{0}: {1:>11}'
         self.suffix = suffix
         self.set_progress(0.0, 0.0)
 
@@ -156,32 +159,33 @@ class IOBar(BarWidgetBase):
         """
          LABEL      [   Tx:     0.0 b/s      Rx:      0.0b/s   ]
         +----------+-+-+----+----------+...-+----+----------+-+-+
-                 10 1 1    4         10    1    4         10 1 1
+                 10 1 1    4         11    1    4         11 1 1
         +--------------+---------------+...-+---------------+---+
-                     12              14    1              14   2
+                     12              15    1              15   2
         +-------------------------------...---------------------+
                                                               43
         """
         (maxcol, ) = size
         label_len = len(self.label) # sanity check. should always be 10
-        var = maxcol - 42
+        var = maxcol - 45
         if var < 1:
-            raise AssertionError('IOBar requires a minimum width of 43 columns!')
+            raise AssertionError('IOBar requires a minimum width of 45 columns!')
         text = ' '
-        text += self.tpl.format('Tx', byte_size(self.tx, suffix=self.suffix))
+        text += self.tpl.format('Tx', byte_size(self.tx, suffix=self.suffix, k=1000))
         text += ' ' * var
-        text += self.tpl.format('Rx', byte_size(self.rx, suffix=self.suffix))
+        text += self.tpl.format('Rx', byte_size(self.rx, suffix=self.suffix, k=1000))
         text += ' '
         line_attr = [
             ('default', 12),
-            ('tx', 14),
+            ('tx', 15),
             ('default', var),
-            ('rx', 14),
+            ('rx', 15),
             ('default', 2),
         ]
-        lines = [self.label + self.START + text + self.END]
-        return urwid.TextCanvas([l.encode('utf-8') for l in lines],
-                                attr=[line_attr], maxcol=maxcol)
+        line = self.label + self.START + text + self.END
+        return urwid.TextCanvas([line.encode('utf-8'), ],
+                                attr=[line_attr],
+                                maxcol=maxcol)
 
 
 class IOStatWidget(MultiBarWidget):
@@ -190,35 +194,41 @@ class IOStatWidget(MultiBarWidget):
         super().__init__(title, bar_cls=IOBar, suffix=suffix)
         self.suffix = suffix
 
-    def toggle_details(self):
-        if len(self.details.contents):
-            self.details.contents = []
-        else:
-            bars = []
-            for ts, packets, name in self._history:
-                bar = self.bar_cls(name, suffix=self.suffix)
-                bars.append((bar, ('pack', None)))
-            bars.append((urwid.Divider(), ('pack', None)))
-            self.details.contents = bars
+    def append_node_bars(self):
+        bars = []
+        for ts, packets, name in self._history:
+            bar = self.bar_cls(name, suffix=self.suffix)
+            bars.append((bar, ('pack', None)))
+        self.details.contents = bars
+        return len(bars)
 
-    def set_data(self, values=[]):
+    def sum(self, values=[]):
+        tx_total = 0.0
+        rx_total = 0.0
         if len(self._history):
-            tx_total = 0.0
-            rx_total = 0.0
-            ## TODO: if details are not shown - no total is calculated!
-            for idx, bar in enumerate(self.details.contents):
-                if idx < len(values):
-                    if self._history[idx][0] >= values[idx][0]:
-                        tx, rx = bar[0].tx, bar[0].rx
-                    else:
-                        tx, rx = self._calculate(values[idx], self._history[idx])
+            for idx, value in enumerate(values):
+                if self._history[idx][0] < values[idx][0]:
+                    tx, rx = self._calculate(values[idx], self._history[idx])
                     tx_total += tx
                     rx_total += rx
-                    bar[0].set_progress(tx, rx)
+        return tx_total, rx_total
+
+    def set_data(self, values=[]):
+        """
+        :param values: a list of [timestamp, {'tx': ..., 'rx': ...}, node_name]
+        """
+        if len(self._history) and \
+                len(self.details.contents) and \
+                self.append_node_bars():
+            for idx, widget in enumerate(self.details.contents):
+                bar = widget[0]
+                if self._history[idx][0] >= values[idx][0]:
+                    tx, rx = bar.tx, bar.rx
                 else:
-                    self.details.contents.remove(bar)
-            self.bar.set_progress(tx_total, rx_total)
-        self._history= values
+                    tx, rx = self._calculate(values[idx], self._history[idx])
+                bar.set_progress(tx, rx)
+        self.bar.set_progress(*self.sum(values))
+        self._history = values
 
     def _calculate(self, value, last_value):
         prev_timestamp, prev_values, prev_name = last_value

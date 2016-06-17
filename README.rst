@@ -50,11 +50,11 @@ After installation the program can be invoked by the following command::
 Hotkeys
 =======
 
-``1``  ... toggle detail bars for ``CPU``, ``PROC``, ``MEM``, ``HEAP``, ``DISK``
-
-``2``  ... toggle detail bars for ``NET I/O``, ``DISK I/O``
-
-``f1`` ... enable/disable job logging (this also sets the ``stats.jobs_log``
+* ``0``  .. toggle cluster info
+* ``1``  .. show utilization for CPU, process, memory, heap and disk
+* ``2``  .. show I/O statistics for network and disk
+* ``3``  .. show aggregated query duration based on `jobs_log`_
+* ``f1`` .. enable/disable job logging (this also sets the ``stats.jobs_log``
 cluster setting)
 
 Known Issues
@@ -79,4 +79,4 @@ Todo
 .. _Crate: https://crate.io
 .. _PyPi: https://pypi.python.org/pypi
 .. _Github: https://github.com/chaudum/crate-top
-
+.. _jobs_log: https://crate.io/docs/reference/en/latest/configuration.html#collecting-stats

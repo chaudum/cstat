@@ -52,6 +52,9 @@ setup(
         'colorama',
         'urwid',
     ],
+    extras_require={
+        'develop': ['pudb'],
+    },
     setup_requires=['setuptools_scm'],
     user_scm_version=True,
     classifiers=[

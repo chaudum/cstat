@@ -66,33 +66,17 @@ class JobsModel(ModelBase):
     cluster.
     """
 
-    RANGE = 60 #seconds
-    LIMIT = 5
-
     QUERY = re.sub('\n|\s+', ' ', """
-        SELECT upper(regexp_matches(stmt, '^(\w+).*')[1]) as stmt,
-               min(ended - started) as min_duration,
-               max(ended - started) as max_duration,
-               avg(ended - started) as avg_duration,
-               count(*) as count
+        SELECT UPPER(REGEXP_MATCHES(stmt, '^\s*(\w+).*')[1]) AS stmt,
+               min(ended - started) AS min_duration,
+               max(ended - started) AS max_duration,
+               avg(ended - started) AS avg_duration,
+               count(*) AS count
         FROM sys.jobs_log
-        WHERE ended > ? AND error IS NULL
+        WHERE ended > CURRENT_TIMESTAMP - 600000
+          AND error IS NULL
         GROUP BY stmt
         ORDER BY count DESC
-        LIMIT ?
-    """.strip('\n '))
-
-    QUERY_LT_055 = re.sub('\n|\s+', ' ', """
-        SELECT regexp_matches(stmt, '^(\w+).*')[1] as stmt,
-               min(ended - started) as min_duration,
-               max(ended - started) as max_duration,
-               avg(ended - started) as avg_duration,
-               count(*) as count
-        FROM sys.jobs_log
-        WHERE ended > ? AND error IS NULL
-        GROUP BY stmt
-        ORDER BY count DESC
-        LIMIT ?
     """.strip('\n '))
 
     def __init__(self, hosts=[]):
@@ -102,19 +86,14 @@ class JobsModel(ModelBase):
         except Exception:
             self.enabled = False
 
-
     def get_initial_state(self):
-        res = self.sql("""SELECT settings['stats']['enabled'] as enabled
+        res = self.sql("""SELECT settings['stats']['enabled'] AS enabled
                           FROM sys.cluster""")
         return res[0].enabled
 
     def refresh(self):
-        ts = int(mktime(
-            (datetime.now() - timedelta(seconds=self.RANGE)).timetuple()
-        ) * 1000)
         self.last_update = datetime.now()
-        query = self.server_version < CRATE_055 and self.QUERY_LT_055 or self.QUERY
-        return self.sql(query, (ts, self.LIMIT, ))
+        return self.sql(self.QUERY)
 
     def toggle(self):
         self.set_stats_enabled(not self.enabled)

@@ -21,42 +21,92 @@
 # software solely pursuant to the terms of the relevant commercial agreement.
 
 
+import re
 import urwid
+from functools import reduce
 from .widgets import (
     MultiBarWidget,
     HorizontalPercentBar,
     HorizontalBytesBar,
     IOStatWidget,
-    IOBar,
 )
 
+RE_PADDING = re.compile('^(\s*)(.*[^\s])(\s*)$')
 
-border = dict(
-    tlcorner = '\u2554',
-    tline = '\u2550',
-    lline = '\u2551',
-    trcorner = '\u2557',
-    blcorner = '\u255a',
-    rline = '\u2551',
-    bline = '\u2550',
-    brcorner = '\u255d',
-)
+
+def padded_text(text):
+    return re.sub(RE_PADDING, r' \2 ', text)
+
+
+class EmptyWidget(urwid.Divider):
+    pass
+
+
+class Tab(urwid.WidgetWrap):
+
+    def __init__(self, widgets, title, color):
+        self.title = title
+        self.content = urwid.Pile(widgets)
+        super().__init__(urwid.AttrMap(self.content, color))
+
+
+class Menu(urwid.Columns):
+
+    EMPTY_COL = ('pack', urwid.Text(''))
+
+    def __init__(self, items, **kwargs):
+        self.items = items
+        cols = self.generate_columns()
+        super().__init__(cols, **kwargs)
+
+    def can_handle_input(self, key):
+        return key in [i.ident for i in self.items]
+
+    def width(self):
+        return reduce(lambda x, y: x + y[0][0] + y[1][0] + 2,
+                      [i.contents for i in self.items],
+                      0)
+
+    def generate_columns(self):
+        cols = []
+        for item in self.items:
+            cols += item.contents
+        return cols
+
+    def set_active(self, ident):
+        for item in self.items:
+            if item.ident == ident:
+                item.set_active()
+
+    def set_inactive(self, ident=None):
+        for item in self.items:
+            if ident and item.ident == ident or ident is None:
+                item.set_inactive()
+
+
+class MenuItem:
+
+    def __init__(self, left, right):
+        self.ident = left
+        self.left = urwid.AttrMap(urwid.Text(left), 'menu')
+        label = padded_text(right)
+        self.right = urwid.AttrMap(urwid.Text(label), 'inactive')
+        self.contents = [
+            (len(left), self.left),
+            (len(label), self.right),
+        ]
+
+    def set_active(self):
+        self.set_attr('active')
+
+    def set_inactive(self):
+        self.set_attr('inactive')
+
+    def set_attr(self, attr):
+        self.right.set_attr_map({None: attr})
+
 
 class MainWindow(urwid.WidgetWrap):
-
-    PALETTE = [
-        ('inverted', 'black, bold', 'white'),
-        ('headline', 'default, bold', 'default'),
-        ('health_green', 'black', 'dark green'),
-        ('health_yellow', 'black', 'yellow'),
-        ('health_red', 'white', 'dark red'),
-        ('text_green', 'dark green', 'default'),
-        ('text_yellow', 'yellow', 'default'),
-        ('text_red', 'dark red', 'default'),
-        ('tx', 'dark cyan', 'default'),
-        ('rx', 'dark magenta', 'default'),
-        ('thead', 'black', 'light cyan'),
-    ]
 
     def __init__(self, controller):
         self.controller = controller
@@ -69,91 +119,113 @@ class MainWindow(urwid.WidgetWrap):
         self.memory_widget = MultiBarWidget('MEM', bar_cls=HorizontalBytesBar)
         self.heap_widget = MultiBarWidget('HEAP', bar_cls=HorizontalBytesBar)
         self.disk_widget = MultiBarWidget('DISK', bar_cls=HorizontalBytesBar)
-        self.net_io_widget = IOStatWidget('NET I/O', suffix='p/s')
-        self.disk_io_widget = IOStatWidget('DISK I/O', suffix='b/s')
-        self.logging_state = urwid.Text([('headline', 'Job Logging')])
+        self.net_io_widget = IOStatWidget('NET', suffix='p/s')
+        self.disk_io_widget = IOStatWidget('DISK', suffix='b/s')
+        self.logging_state = urwid.Text([('headline', 'Jobs Logging')])
         self.logs = urwid.SimpleFocusListWalker([])
 
         self.t_cluster_name = urwid.Text('-')
         self.t_version = urwid.Text('-')
-        self.t_load = urwid.Text('-/-/-')
+        self.t_load = urwid.Text('-/-/-', align='right')
         self.t_hosts = urwid.Text('-')
         self.t_handler = urwid.Text('-')
 
-        header = urwid.LineBox(
-            urwid.Columns([
-                (10, urwid.Pile([
-                    urwid.Text('Cluster'),
-                    urwid.Text('Version'),
-                    urwid.Text('Load'),
-                    urwid.Text('Handler'),
-                    urwid.Text('Hosts'),
-                ])),
-                urwid.AttrMap(urwid.Pile([
-                    self.t_cluster_name,
-                    self.t_version,
-                    self.t_load,
-                    self.t_handler,
-                    self.t_hosts,
-                ]), 'headline'),
-            ]),
-            **border
-        )
+        self.menu1 = Menu([
+            MenuItem('0', 'Info'),
+        ], dividechars=1)
+        self.menu1.set_active('0')
 
-        self.body = urwid.Pile([
-            urwid.Divider(),
-            urwid.Text([('headline', 'Stats')]),
-            urwid.Divider(),
-            urwid.Columns([
-                urwid.Pile([
-                    self.cpu_widget,
-                    self.process_widget,
-                    self.disk_widget,
-                ]),
-                urwid.Pile([
-                    self.memory_widget,
-                    self.heap_widget,
-                ]),
-            ], dividechars=3),
-            urwid.Divider(),
-            urwid.Columns([
-                urwid.Pile([
-                    self.net_io_widget,
-                ]),
-                urwid.Pile([
-                    self.disk_io_widget,
-                ]),
-            ], dividechars=3),
-            urwid.Divider(),
-            urwid.Pile([
-                self.logging_state,
-                urwid.AttrMap(
-                    urwid.Columns([
-                        urwid.Text('Statement Type'),
-                        (10, urwid.Text('Count', align='right')),
-                        (10, urwid.Text('Min', align='right')),
-                        (10, urwid.Text('Avg', align='right')),
-                        (10, urwid.Text('Max', align='right')),
-                    ], dividechars=1), 'thead'),
-                urwid.BoxAdapter(urwid.ListBox(self.logs), height=10),
-            ]),
+        self.menu2 = Menu([
+            MenuItem('1', 'Utilization'),
+            MenuItem('2', 'I/O Stats'),
+            MenuItem('3', 'Job Logging'),
+        ], dividechars=1)
+
+        self.menu3 = Menu([
+            #MenuItem('?', 'Help'),
+            MenuItem('q', 'Quit'),
+        ], dividechars=1)
+
+        menu = urwid.Pile([
+            urwid.AttrMap(urwid.Text('cstat'), 'inverted'),
+            urwid.AttrMap(urwid.Columns([
+                (self.menu1.width(), self.menu1),
+                (self.menu2.width(), self.menu2),
+                (self.menu3.width(), self.menu3),
+                Menu.EMPTY_COL,
+            ]), 'menu'),
         ])
 
-        footer = urwid.Columns([
-            (1, urwid.Text('1')),
-            (6, urwid.AttrMap(urwid.Text('Stats'), 'inverted')),
-            (1, urwid.Text('2')),
-            (6, urwid.AttrMap(urwid.Text('I/O'), 'inverted')),
-            (2, urwid.Text('F1')),
-            (6, urwid.AttrMap(urwid.Text('Jobs'), 'inverted')),
-            ('pack', urwid.AttrMap(urwid.Text(''), 'inverted')),
+        footer = urwid.AttrMap(urwid.Columns([
+            self.t_load,
+        ], dividechars=1), 'inverted')
+
+        self.tab_1 = Tab([
+            urwid.LineBox(
+                urwid.Columns([
+                    (10, urwid.Pile([
+                        urwid.Text('Cluster'),
+                        urwid.Text('Version'),
+                        urwid.Text('Handler'),
+                        urwid.Text('Hosts'),
+                    ])),
+                    urwid.Pile([
+                        self.t_cluster_name,
+                        self.t_version,
+                        self.t_handler,
+                        self.t_hosts,
+                    ]),
+                ]), title='Cluster Info'
+            ),
+        ], 'Cluster Info', 'menu')
+
+        self.tab_2 = Tab([
+            urwid.Columns([
+                urwid.Pile([
+                    urwid.LineBox(self.cpu_widget, 'CPU Usage'),
+                    urwid.LineBox(self.memory_widget, 'Memory Usage'),
+                    urwid.LineBox(self.disk_widget, 'Disk Usage'),
+                ]),
+                urwid.Pile([
+                    urwid.LineBox(self.process_widget, 'Crate Process'),
+                    urwid.LineBox(self.heap_widget, 'HEAP Usage'),
+                ]),
+            ], dividechars=1),
+        ], 'Utilization', 'default')
+
+        self.tab_3 = Tab([
+            urwid.Columns([
+                urwid.Pile([
+                    urwid.LineBox(self.net_io_widget, 'Network I/O'),
+                ]),
+                urwid.Pile([
+                    urwid.LineBox(self.disk_io_widget, 'Disk I/O'),
+                ]),
+            ], dividechars=1),
+        ], 'I/O Stats', 'default')
+
+        self.tab_4 = Tab([
+            self.logging_state,
+            urwid.AttrMap(urwid.Columns([
+                urwid.Text('Statement Type'),
+                (10, urwid.Text('Count', align='right')),
+                (10, urwid.Text('Min', align='right')),
+                (10, urwid.Text('Avg', align='right')),
+                (10, urwid.Text('Max', align='right')),
+            ], dividechars=1), 'head'),
+            urwid.BoxAdapter(urwid.ListBox(self.logs), height=10),
+        ], 'Jobs Logging', 'default')
+
+        self.tab_holder = urwid.WidgetPlaceholder(EmptyWidget())
+        self.tab_header = urwid.WidgetPlaceholder(self.tab_1)
+        body = urwid.Pile([
+            self.tab_header,
+            self.tab_holder,
         ])
 
         self.update_info(None)
-        return urwid.Frame(urwid.Filler(self.body, valign='top'),
-                           header=header,
-                           footer=footer)
-
+        return urwid.Frame(urwid.Filler(body, valign='top'),
+                           header=menu, footer=footer)
 
     def update(self, info=None, nodes=[], jobs=[]):
         if info:
@@ -163,19 +235,19 @@ class MainWindow(urwid.WidgetWrap):
         if jobs:
             self.update_jobs(jobs)
 
-    def update_jobs(self, jobs=[], clear=False):
-        if not clear and jobs:
+    def update_jobs(self, jobs=[]):
+        if jobs is None:
+            self.logs[:] = []
+        elif jobs:
             self.logs[:] = [self._jobs_row('{0}'.format(r.count),
                                            '{0:.0f}ms'.format(r.min_duration),
                                            '{0:.0f}ms'.format(r.max_duration),
                                            '{0:.0f}ms'.format(r.avg_duration),
                                            r.stmt) for r in jobs]
-        else:
-            self.logs[:] = []
 
     def _jobs_row(self, count, min, max, avg, stmt):
         return urwid.Columns([
-            urwid.Text(stmt),
+            urwid.Text([('default', stmt) if stmt else ('bg_red', '???')]),
             (10, urwid.Text([('default', count)], align='right')),
             (10, urwid.Text([('text_green', min)], align='right')),
             (10, urwid.Text([('text_yellow', avg)], align='right')),
@@ -183,11 +255,14 @@ class MainWindow(urwid.WidgetWrap):
         ], dividechars=1)
 
     def set_logging_state(self, enabled):
-        state = enabled and ('health_green', 'ON') or ('health_red', 'OFF')
+        state = enabled and ('bg_green', 'ON') or ('bg_red', 'OFF')
         self.logging_state.set_text([
-            ('headline', 'Job Logging '),
-            state
+            ('default', 'Logging: '),
+            state,
+            ('default', ' (F1 to toggle)')
         ])
+        if not enabled:
+            self.update_jobs(jobs=None)
 
     def update_nodes(self, data=[]):
         cpu = []
@@ -224,7 +299,9 @@ class MainWindow(urwid.WidgetWrap):
             disk.append(self.calculate_disk_usage(node.fs) + [node.name])
             net_io.append([
                 node.net_timestamp,
-                dict(tx=node.net_packets['sent'], rx=node.net_packets['received']),
+                dict(
+                    tx=node.net_packets['sent'],
+                    rx=node.net_packets['received']),
                 node.name,
             ])
             disk_io.append([
@@ -276,12 +353,43 @@ class MainWindow(urwid.WidgetWrap):
         self.t_handler.set_text(' '.join(hosts))
 
     def handle_input(self, key):
-        if key == '1':
-            self.cpu_widget.toggle_details()
-            self.process_widget.toggle_details()
-            self.memory_widget.toggle_details()
-            self.heap_widget.toggle_details()
-            self.disk_widget.toggle_details()
-        elif key == '2':
-            self.net_io_widget.toggle_details()
-            self.disk_io_widget.toggle_details()
+        if self.menu1.can_handle_input(key):
+            if key == '0':
+                if self.tab_header.original_widget is self.tab_1:
+                    self.tab_header.original_widget = EmptyWidget()
+                    self.menu1.set_inactive(key)
+                else:
+                    self.tab_header.original_widget = self.tab_1
+                    self.menu1.set_active(key)
+        elif self.menu2.can_handle_input(key):
+            self.menu2.set_inactive()
+            if key == '1':
+                self.set_active_tab(self.tab_2)
+                self.menu2.set_active(key)
+            elif key == '2':
+                self.set_active_tab(self.tab_3)
+                self.menu2.set_active(key)
+            elif key == '3':
+                self.set_active_tab(self.tab_4)
+                self.menu2.set_active(key)
+        elif self.menu3.can_handle_input(key):
+            self.menu3.set_inactive()
+        else:
+            if key == 'x':
+                self.cpu_widget.toggle_details()
+                self.process_widget.toggle_details()
+                self.memory_widget.toggle_details()
+                self.heap_widget.toggle_details()
+                self.disk_widget.toggle_details()
+                self.net_io_widget.toggle_details()
+                self.disk_io_widget.toggle_details()
+
+
+
+    def get_active_tab(self):
+        return len(self.body.contents) and \
+            self.body.contents[0][0] or None
+
+    def set_active_tab(self, tab):
+        self.tab_holder.original_widget = tab
+

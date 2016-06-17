@@ -32,6 +32,23 @@ from urwid.raw_display import Screen
 
 __version__ = '0.1.0'
 
+PALETTE = [
+    ('active', 'black, bold', 'dark cyan'),
+    ('inactive', 'light gray', 'default'),
+    ('menu', 'light gray', 'dark gray'),
+    ('inverted', 'black, bold', 'light gray'),
+    ('headline', 'default, bold', 'default'),
+    ('bg_green', 'black', 'dark green'),
+    ('bg_yellow', 'black', 'brown'),
+    ('bg_red', 'black', 'dark red'),
+    ('text_green', 'dark green', 'default'),
+    ('text_yellow', 'yellow', 'default'),
+    ('text_red', 'dark red, bold', 'default'),
+    ('tx', 'dark cyan', 'default'),
+    ('rx', 'dark magenta', 'default'),
+    ('head', 'black, bold', 'dark cyan'),
+]
+
 
 class CrateStat(object):
     """
@@ -39,6 +56,8 @@ class CrateStat(object):
     """
 
     def __init__(self, interval, hosts=[]):
+        self.screen = Screen()
+        self.screen.set_terminal_properties(256)
         self.models = [
             GraphModel(hosts),
             NodesModel(hosts),
@@ -54,9 +73,8 @@ class CrateStat(object):
     def main(self):
         if not self.fetch_initial():
             return self.quit('Could not connect to {0}'.format(self.models[0].hosts))
-        self.loop = urwid.MainLoop(self.view,
-                                   self.view.PALETTE,
-                                   screen=Screen(),
+        self.loop = urwid.MainLoop(self.view, PALETTE,
+                                   screen=self.screen,
                                    unhandled_input=self.handle_input)
         self.loop.set_alarm_in(0.1, self.fetch)
         self.loop.run()
@@ -99,7 +117,7 @@ class CrateStat(object):
 
     def fetch(self, loop, args):
         try:
-            # todo: make this multithreaded
+            # todo: execute HTTP requests asynchronous
             info, nodes, jobs = [m.refresh() for m in self.models]
         except Exception as e:
             self.quit(e)
