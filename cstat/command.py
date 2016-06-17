@@ -25,15 +25,12 @@ import sys
 import urwid
 import argparse
 import traceback
-from .logging import ColorLog
 from .models import GraphModel, NodesModel, JobsModel
-from .window import CrateTopWindow
+from .window import MainWindow
+from urwid.raw_display import Screen
 
 
-LOGGER = ColorLog(__name__)
-
-
-class CrateTop(object):
+class CrateStat(object):
     """
     Main entry point of application
     """
@@ -46,16 +43,17 @@ class CrateTop(object):
             NodesModel(hosts),
             JobsModel(hosts),
         ]
-        self.view = CrateTopWindow(self)
+        self.view = MainWindow(self)
         self.view.update_footer(hosts)
         self.loop = None
         self.exit_message = None
 
-    def __call__(self):
+    def main(self):
         if not self.fetch_initial():
             return self.quit('Could not connect to {0}'.format(self.models[0].hosts))
         self.loop = urwid.MainLoop(self.view,
                                    self.view.PALETTE,
+                                   screen=Screen(),
                                    unhandled_input=self.handle_input)
         self.loop.set_alarm_in(0.1, self.fetch)
         self.loop.run()
@@ -67,7 +65,6 @@ class CrateTop(object):
         if self.exit_message:
             print(self.exit_message, file=sys.stderr)
         elif ex:
-            LOGGER.error(ex.__name__, msg)
             for line in traceback.format_tb(trace):
                 print(line, file=sys.stderr)
 
@@ -126,6 +123,6 @@ def main():
     Instantiate CrateTop and run its main loop by calling the instance.
     """
     args = parse_cli()
-    with CrateTop(hosts=args.hosts) as top:
-        top()
+    with CrateStat(hosts=args.hosts) as top:
+        top.main()
 

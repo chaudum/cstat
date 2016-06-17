@@ -22,7 +22,6 @@
 
 
 import urwid
-from .logging import ColorLog
 from .widgets import (
     MultiBarWidget,
     HorizontalPercentBar,
@@ -31,7 +30,6 @@ from .widgets import (
     IOBar,
 )
 
-LOGGER = ColorLog(__name__)
 
 border = dict(
     tlcorner = '\u2554',
@@ -44,7 +42,7 @@ border = dict(
     brcorner = '\u255d',
 )
 
-class CrateTopWindow(urwid.WidgetWrap):
+class MainWindow(urwid.WidgetWrap):
 
     PALETTE = [
         ('inverted', 'black, bold', 'white'),
@@ -63,7 +61,7 @@ class CrateTopWindow(urwid.WidgetWrap):
     def __init__(self, controller):
         self.controller = controller
         self.frame = self.layout()
-        super(CrateTopWindow, self).__init__(self.frame)
+        super().__init__(self.frame)
 
     def layout(self):
         self.cpu_widget = MultiBarWidget('CPU')
@@ -73,23 +71,23 @@ class CrateTopWindow(urwid.WidgetWrap):
         self.disk_widget = MultiBarWidget('DISK', bar_cls=HorizontalBytesBar)
         self.net_io_widget = IOStatWidget('NET I/O', suffix='p/s')
         self.disk_io_widget = IOStatWidget('DISK I/O', suffix='b/s')
-        self.logging_state = urwid.Text([('headline', b'Job Logging')])
+        self.logging_state = urwid.Text([('headline', 'Job Logging')])
         self.logs = urwid.SimpleFocusListWalker([])
 
-        self.t_cluster_name = urwid.Text(b'-')
-        self.t_version = urwid.Text(b'-')
-        self.t_load = urwid.Text(b'-/-/-')
-        self.t_hosts = urwid.Text(b'-')
-        self.t_handler = urwid.Text(b'-')
+        self.t_cluster_name = urwid.Text('-')
+        self.t_version = urwid.Text('-')
+        self.t_load = urwid.Text('-/-/-')
+        self.t_hosts = urwid.Text('-')
+        self.t_handler = urwid.Text('-')
 
         header = urwid.LineBox(
             urwid.Columns([
                 (10, urwid.Pile([
-                    urwid.Text(b'Cluster'),
-                    urwid.Text(b'Version'),
-                    urwid.Text(b'Load'),
-                    urwid.Text(b'Handler'),
-                    urwid.Text(b'Hosts'),
+                    urwid.Text('Cluster'),
+                    urwid.Text('Version'),
+                    urwid.Text('Load'),
+                    urwid.Text('Handler'),
+                    urwid.Text('Hosts'),
                 ])),
                 urwid.AttrMap(urwid.Pile([
                     self.t_cluster_name,
@@ -104,7 +102,7 @@ class CrateTopWindow(urwid.WidgetWrap):
 
         self.body = urwid.Pile([
             urwid.Divider(),
-            urwid.Text([('headline', b'Stats')]),
+            urwid.Text([('headline', 'Stats')]),
             urwid.Divider(),
             urwid.Columns([
                 urwid.Pile([
@@ -142,12 +140,12 @@ class CrateTopWindow(urwid.WidgetWrap):
         ])
 
         footer = urwid.Columns([
-            (1, urwid.Text(b'1')),
-            (6, urwid.AttrMap(urwid.Text(b'Stats'), 'inverted')),
-            (1, urwid.Text(b'2')),
-            (6, urwid.AttrMap(urwid.Text(b'I/O'), 'inverted')),
-            (2, urwid.Text(b'F1')),
-            (6, urwid.AttrMap(urwid.Text(b'Jobs'), 'inverted')),
+            (1, urwid.Text('1')),
+            (6, urwid.AttrMap(urwid.Text('Stats'), 'inverted')),
+            (1, urwid.Text('2')),
+            (6, urwid.AttrMap(urwid.Text('I/O'), 'inverted')),
+            (2, urwid.Text('F1')),
+            (6, urwid.AttrMap(urwid.Text('Jobs'), 'inverted')),
             ('pack', urwid.AttrMap(urwid.Text(''), 'inverted')),
         ])
 
@@ -185,9 +183,9 @@ class CrateTopWindow(urwid.WidgetWrap):
         ], dividechars=1)
 
     def set_logging_state(self, enabled):
-        state = enabled and ('health_green', b'ON') or ('health_red', b'OFF')
+        state = enabled and ('health_green', 'ON') or ('health_red', 'OFF')
         self.logging_state.set_text([
-            ('headline', b'Job Logging '),
+            ('headline', 'Job Logging '),
             state
         ])
 
@@ -287,5 +285,3 @@ class CrateTopWindow(urwid.WidgetWrap):
         elif key == '2':
             self.net_io_widget.toggle_details()
             self.disk_io_widget.toggle_details()
-        else:
-            LOGGER.warn('Unhandled input:', key)

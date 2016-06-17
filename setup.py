@@ -19,37 +19,42 @@
 # with Crate these terms will supersede the license and you may use the
 # software solely pursuant to the terms of the relevant commercial agreement.
 
-import os
-import re
 import sys
 
 from setuptools import setup, find_packages
 
-requirements = [
-    'appdirs',
-    'crate',
-    'colorama',
-    'setuptools',
-    'urwid',
-]
+def readme():
+    try:
+        with open('README.rst', 'rb') as fp:
+            return fp.read().decode('utf-8')
+    except Exception:
+        return ''
+
 
 setup(
-    name='crate-top',
+    name='cstat',
     version='0.1.0',
-    author='CRATE Technology GmbH',
-    author_email='office@crate.io',
-    package_dir={'': 'src'},
-    description='A top for Crate.IO',
+    author='Christian Haudum',
+    author_email='christian.haudum@crate.io',
+    url='https://github.com/chaudum/crate-top',
+    description='A visual stat tool for Crate clusters',
+    long_description=readme(),
     platforms=['any'],
     license='Apache License 2.0',
-    packages=find_packages('src'),
-    namespace_packages=['crate'],
+    packages=['cstat'],
     entry_points={
         'console_scripts': [
-            'ctop = crate.top.command:main',
+            'cstat = cstat.command:main',
         ]
     },
-    install_requires=requirements,
+    install_requires=[
+        'appdirs',
+        'crate',
+        'colorama',
+        'urwid',
+    ],
+    setup_requires=['setuptools_scm'],
+    user_scm_version=True,
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
@@ -59,6 +64,5 @@ setup(
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
-        'Topic :: Database'
     ],
 )
