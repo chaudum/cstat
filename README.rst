@@ -25,7 +25,7 @@ A first version should be available from PyPi_ in summer 2016.
 
     git clone https://github.com/chaudum/crate-top.git cstat
     cd cstat
-    python3.4 -m env
+    python3.4 -m venv env
     source ./env/bin/activate
     pip install -e .
 
