@@ -2,12 +2,12 @@
 cstat
 =====
 
-*A visual stat tool for Crate clusters*
+*A visual stat tool for `CrateDB`_ clusters*
 
 ... formerly known as ``ctop``.
 
 ``cstat`` is ispired by the awesome interactive process monitoring tool `htop`_.
-``cstat`` should be a similar tool to `iostat`_, but for monitoring `Crate`_
+``cstat`` should be a similar tool to `iostat`_, but for monitoring `CrateDB`_
 clusters.
 
 .. image:: screenshot.png
@@ -37,12 +37,12 @@ After installation the program can be invoked by the following command::
     >>> cstat --help
     usage: cstat [-h] [--hosts HOST [HOST ...]] [--interval INTERVAL] [--version]
 
-    A visual stat tool for Crate clusters
+    A visual stat tool for CrateDB clusters
 
     optional arguments:
       -h, --help            show this help message and exit
       --hosts HOST [HOST ...], --crate-hosts HOST [HOST ...]
-                            one or more Crate hosts to connect to
+                            one or more CrateDB hosts to connect to
       --interval INTERVAL, --refresh-interval INTERVAL
                             amount of time in seconds between each update
       --version             show program's version number and exit
@@ -77,7 +77,7 @@ Todo
 
 .. _htop: http://hisham.hm/htop/
 .. _iostat: http://linux.die.net/man/1/iostat
-.. _Crate: https://crate.io
+.. _CrateDB: https://crate.io
 .. _PyPi: https://pypi.python.org/pypi
 .. _Github: https://github.com/chaudum/crate-top
 .. _jobs_log: https://crate.io/docs/reference/en/latest/configuration.html#collecting-stats

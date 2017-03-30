@@ -131,9 +131,9 @@ def parse_cli():
     Parse command line arguments
     """
     parser = argparse.ArgumentParser('cstat',
-                                     description='A visual stat tool for Crate clusters')
+                                     description='A visual stat tool for CrateDB clusters')
     parser.add_argument('--hosts', '--crate-hosts',
-                        help='one or more Crate hosts to connect to',
+                        help='one or more CrateDB hosts to connect to',
                         type=str, nargs='+', metavar='HOST',
                         default=['localhost:4200'])
     parser.add_argument('--interval', '--refresh-interval',
@@ -146,7 +146,7 @@ def parse_cli():
 
 def main():
     """
-    Instantiate CrateTop and run its main loop by calling the instance.
+    Instantiate CrateStat and run its main loop by calling the instance.
     """
     cla = parse_cli()
     with CrateStat(cla.interval, hosts=cla.hosts) as stat:

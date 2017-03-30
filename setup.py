@@ -36,7 +36,7 @@ setup(
     author='Christian Haudum',
     author_email='christian.haudum@crate.io',
     url='https://github.com/chaudum/crate-top',
-    description='A visual stat tool for Crate clusters',
+    description='A visual stat tool for CrateDB clusters',
     long_description=readme(),
     platforms=['any'],
     license='Apache License 2.0',
@@ -64,7 +64,7 @@ setup(
         'Operating System :: OS Independent',
         'Programming Language :: Python',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
     ],
 )
