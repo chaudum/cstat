@@ -56,7 +56,7 @@ setup(
         'develop': ['pudb'],
     },
     setup_requires=['setuptools_scm'],
-    user_scm_version=True,
+    use_scm_version=True,
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',

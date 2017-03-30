@@ -1,11 +1,8 @@
+=======
 CHANGES
 =======
 
-Unreleased
-----------
+2017/03/30 0.1.0
+================
 
-* Added --interval and --version command line arguments
-
-* fixed bug in bar graph widget that tried to print more characters than
-  allowed per line causing ctop to crash
-
+- initial release
