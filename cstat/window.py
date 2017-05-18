@@ -275,10 +275,9 @@ class MainWindow(urwid.WidgetWrap):
         load = [0.0, 0.0, 0.0]
         num = float(len(data))
         for node in data:
-            used = node.cpu['system'] + node.cpu['user'] + node.cpu['stolen']
             cpu.append([
-                min(used, 100),
-                min(used + node.cpu['idle'], 100),
+                node.cpu_used,
+                node.cpu_used + node.cpu_idle,
                 node.name,
             ])
             process.append([
