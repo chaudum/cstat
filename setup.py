@@ -1,5 +1,4 @@
-# -*- coding: utf-8; -*-
-#
+# vi: fileencoding=utf-8
 # Licensed to CRATE Technology GmbH ("Crate") under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  Crate licenses
@@ -43,7 +42,7 @@ setup(
     packages=['cstat'],
     entry_points={
         'console_scripts': [
-            'cstat = cstat.command:main',
+            'cstat = cstat.repl:main',
         ]
     },
     install_requires=[

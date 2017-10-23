@@ -1,6 +1,4 @@
-# -*- coding: utf-8; -*-
 # vi: set encoding=utf-8
-#
 # Licensed to CRATE Technology GmbH ("Crate") under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  Crate licenses
@@ -23,14 +21,10 @@
 import os
 import sys
 import urwid
-import argparse
 import traceback
 from .models import GraphModel, NodesModel, JobsModel
 from .window import MainWindow
-from urwid.raw_display import Screen
 
-
-__version__ = '0.1.0'
 
 PALETTE = [
     ('active', 'black, bold', 'dark cyan'),
@@ -55,9 +49,8 @@ class CrateStat(object):
     Main entry point of application
     """
 
-    def __init__(self, interval, hosts=[]):
-        self.screen = Screen()
-        self.screen.set_terminal_properties(256)
+    def __init__(self, screen, interval, hosts=[]):
+        self.screen = screen
         self.models = [
             GraphModel(hosts),
             NodesModel(hosts),
@@ -124,31 +117,4 @@ class CrateStat(object):
         else:
             self.view.update(info, nodes, jobs)
         loop.set_alarm_in(self.refresh_interval, self.fetch)
-
-
-def parse_cli():
-    """
-    Parse command line arguments
-    """
-    parser = argparse.ArgumentParser('cstat',
-                                     description='A visual stat tool for CrateDB clusters')
-    parser.add_argument('--hosts', '--crate-hosts',
-                        help='one or more CrateDB hosts to connect to',
-                        type=str, nargs='+', metavar='HOST',
-                        default=['localhost:4200'])
-    parser.add_argument('--interval', '--refresh-interval',
-                        help='amount of time in seconds between each update',
-                        default=2,
-                        type=float)
-    parser.add_argument('--version', action='version', version=__version__)
-    return parser.parse_args()
-
-
-def main():
-    """
-    Instantiate CrateStat and run its main loop by calling the instance.
-    """
-    cla = parse_cli()
-    with CrateStat(cla.interval, hosts=cla.hosts) as stat:
-        stat.main()
 
