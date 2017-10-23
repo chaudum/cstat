@@ -63,9 +63,10 @@ class CrateStat(object):
         self.loop = None
         self.exit_message = None
 
-    def main(self):
-        if not self.fetch_initial():
-            return self.quit('Could not connect to {0}'.format(self.models[0].hosts))
+    def run(self):
+        if not self.connect():
+            return self.quit('Could not connect to {}'.format(
+                self.models[0].hosts))
         self.loop = urwid.MainLoop(self.view, PALETTE,
                                    screen=self.screen,
                                    unhandled_input=self.handle_input)
@@ -97,15 +98,14 @@ class CrateStat(object):
         else:
             self.view.handle_input(key)
 
-    def fetch_initial(self):
+    def connect(self):
         try:
             info = self.models[0].refresh()
         except Exception as e:
             return False
-        else:
-            self.view.update(info=info)
-            stats_enabled = self.models[2].get_initial_state()
-            self.view.set_logging_state(stats_enabled)
+        self.view.update(info=info)
+        stats_enabled = self.models[2].get_initial_state()
+        self.view.set_logging_state(stats_enabled)
         return True
 
     def fetch(self, loop, args):

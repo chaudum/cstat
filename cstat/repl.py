@@ -44,12 +44,16 @@ def parse_cli():
     return parser.parse_args()
 
 
+def get_screen():
+    screen = Screen()
+    screen.set_terminal_properties(256)
+    return screen
+
+
 def main():
     """
     Instantiate CrateStat and run its main loop by calling the instance.
     """
     args = parse_cli()
-    screen = Screen()
-    screen.set_terminal_properties(256)
-    with CrateStat(screen, args.interval, hosts=args.hosts) as stat:
-        stat.main()
+    with CrateStat(get_screen(), args.interval, hosts=args.hosts) as stat:
+        stat.run()
