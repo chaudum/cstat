@@ -1,6 +1,4 @@
-# -*- coding: utf-8; -*-
 # vi: set encoding=utf-8
-#
 # Licensed to CRATE Technology GmbH ("Crate") under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  Crate licenses
@@ -22,18 +20,10 @@
 
 
 import re
-import sys
 import json
-import urwid
 import urllib3
-from distutils.version import StrictVersion
-from time import mktime
 from datetime import datetime, timedelta
 from collections import namedtuple
-from urllib3.exceptions import MaxRetryError
-from crate.client import connect
-
-CRATE_055 = StrictVersion('0.55')
 
 
 class ModelBase(object):
@@ -42,10 +32,9 @@ class ModelBase(object):
     cluster to get their data.
     """
 
-    def __init__(self, hosts=[]):
-        self.hosts = hosts
-        conn = connect(self.hosts)
+    def __init__(self, conn):
         self.server_version = conn.lowest_server_version
+        self.connection = conn
         self.cursor = conn.cursor()
         self.http = urllib3.PoolManager(3)
         self.last_update = datetime.now()
@@ -79,8 +68,8 @@ class JobsModel(ModelBase):
         ORDER BY count DESC
     """.strip('\n '))
 
-    def __init__(self, hosts=[]):
-        super(JobsModel, self).__init__(hosts)
+    def __init__(self, conn):
+        super().__init__(conn)
         try:
             self.enabled = self.get_initial_state()
         except Exception:
@@ -136,8 +125,8 @@ class GraphModel(ModelBase):
         return self.cluster_info()
 
     def cluster_info(self):
-        response = self.http.request('GET', self.hosts[0])
+        host = self.connection.client.active_servers[0]
+        response = self.http.request('GET', host)
         return response.status == 200 \
             and json.loads(response.data.decode('utf-8')) \
             or None
-

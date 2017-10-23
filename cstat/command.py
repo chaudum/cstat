@@ -45,28 +45,22 @@ PALETTE = [
 
 
 class CrateStat(object):
-    """
-    Main entry point of application
-    """
 
-    def __init__(self, screen, interval, hosts=[]):
+    def __init__(self, screen, conn):
         self.screen = screen
         self.models = [
-            GraphModel(hosts),
-            NodesModel(hosts),
-            JobsModel(hosts),
+            GraphModel(conn),
+            NodesModel(conn),
+            JobsModel(conn),
         ]
         # don't allow refresh intervals < 100ms
-        self.refresh_interval = max(0.1, interval)
         self.view = MainWindow(self)
-        self.view.update_footer(hosts)
+        self.view.update_footer(conn.client.active_servers)
         self.loop = None
         self.exit_message = None
 
-    def run(self):
-        if not self.connect():
-            return self.quit('Could not connect to {}'.format(
-                self.models[0].hosts))
+    def serve(self, interval=5):
+        self.refresh_interval = max(0.1, interval)
         self.loop = urwid.MainLoop(self.view, PALETTE,
                                    screen=self.screen,
                                    unhandled_input=self.handle_input)
@@ -74,6 +68,7 @@ class CrateStat(object):
         self.loop.run()
 
     def __enter__(self):
+        self.fetch_initial()
         return self
 
     def __exit__(self, ex, msg, trace):
@@ -98,23 +93,22 @@ class CrateStat(object):
         else:
             self.view.handle_input(key)
 
-    def connect(self):
+    def fetch_initial(self):
         try:
             info = self.models[0].refresh()
         except Exception as e:
-            return False
-        self.view.update(info=info)
-        stats_enabled = self.models[2].get_initial_state()
-        self.view.set_logging_state(stats_enabled)
-        return True
+            self.quit(e)
+        else:
+            self.view.update(info=info)
+            stats_enabled = self.models[2].get_initial_state()
+            self.view.set_logging_state(stats_enabled)
 
     def fetch(self, loop, args):
         try:
-            # todo: execute HTTP requests asynchronous
             info, nodes, jobs = [m.refresh() for m in self.models]
         except Exception as e:
             self.quit(e)
         else:
             self.view.update(info, nodes, jobs)
-        loop.set_alarm_in(self.refresh_interval, self.fetch)
+            loop.set_alarm_in(self.refresh_interval, self.fetch)
 

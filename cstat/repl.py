@@ -19,11 +19,15 @@
 # software solely pursuant to the terms of the relevant commercial agreement.
 
 import argparse
+from distutils.version import StrictVersion
+from urwid.raw_display import Screen
+from crate.client import connect
+from .command import CrateStat
+
 
 __version__ = '0.1.0'
 
-from urwid.raw_display import Screen
-from .command import CrateStat
+EXIT_SUCCESS, EXIT_ERROR = 0, 1
 
 
 def parse_cli():
@@ -44,16 +48,19 @@ def parse_cli():
     return parser.parse_args()
 
 
-def get_screen():
-    screen = Screen()
-    screen.set_terminal_properties(256)
-    return screen
-
-
 def main():
-    """
-    Instantiate CrateStat and run its main loop by calling the instance.
-    """
     args = parse_cli()
-    with CrateStat(get_screen(), args.interval, hosts=args.hosts) as stat:
-        stat.run()
+
+    with connect(args.hosts) as conn:
+
+        if conn.lowest_server_version == StrictVersion('0.0.0'):
+            print(f'Could not connect to {args.hosts}')
+            return EXIT_ERROR
+
+        screen = Screen()
+        screen.set_terminal_properties(256)
+
+        with CrateStat(screen, conn) as ui:
+            ui.serve(interval=args.interval)
+
+    return EXIT_SUCCESS
