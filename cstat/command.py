@@ -22,7 +22,7 @@ import os
 import sys
 import urwid
 import traceback
-from .models import GraphModel, NodesModel, JobsModel
+from .connector import Connector
 from .window import MainWindow
 
 
@@ -44,31 +44,45 @@ PALETTE = [
 ]
 
 
-class CrateStat(object):
+class ResultConsumer:
+
+    def __init__(self, on_result=lambda x: x, on_failure=lambda x: x):
+        self._apply_result = on_result
+        self._apply_failure = on_failure
+
+    def apply(self, result=None, failure=None):
+        if result is not None:
+            self._apply_result(result)
+        if failure is not None:
+            self._apply_failure(failure)
+
+
+class CrateStat:
 
     def __init__(self, screen, conn):
         self.screen = screen
-        self.models = [
-            GraphModel(conn),
-            NodesModel(conn),
-            JobsModel(conn),
-        ]
-        # don't allow refresh intervals < 100ms
-        self.view = MainWindow(self)
-        self.view.update_footer(conn.client.active_servers)
+        self.conn = conn
         self.loop = None
         self.exit_message = None
+        self.connector = None
+        self.view = None
+        self.consumer = None
 
     def serve(self, interval=5):
-        self.refresh_interval = max(0.1, interval)
         self.loop = urwid.MainLoop(self.view, PALETTE,
                                    screen=self.screen,
-                                   unhandled_input=self.handle_input)
-        self.loop.set_alarm_in(0.1, self.fetch)
+                                   unhandled_input=self.on_input)
+        self.connector = Connector(self.conn,
+                                   self.loop,
+                                   self.consumer,
+                                   interval=interval)
         self.loop.run()
 
     def __enter__(self):
-        self.fetch_initial()
+        self.consumer = ResultConsumer(on_result=self.on_data,
+                                       on_failure=self.on_error)
+        self.view = MainWindow(self)
+        self.view.update_footer(self.conn.client.active_servers)
         return self
 
     def __exit__(self, ex, msg, trace):
@@ -80,35 +94,19 @@ class CrateStat(object):
 
     def quit(self, msg=None):
         self.exit_message = msg
-        if self.loop:
-            raise urwid.ExitMainLoop()
-        return 1
+        raise urwid.ExitMainLoop()
 
-    def handle_input(self, key):
+    def on_input(self, key):
         if key in ('q', 'Q'):
-            self.quit()
+            self.quit('Bye!')
         elif key == 'f1':
             self.models[2].toggle()
             self.view.set_logging_state(self.models[2].enabled)
         else:
             self.view.handle_input(key)
 
-    def fetch_initial(self):
-        try:
-            info = self.models[0].refresh()
-        except Exception as e:
-            self.quit(e)
-        else:
-            self.view.update(info=info)
-            stats_enabled = self.models[2].get_initial_state()
-            self.view.set_logging_state(stats_enabled)
+    def on_data(self, data):
+        self.view.update(**data)
 
-    def fetch(self, loop, args):
-        try:
-            info, nodes, jobs = [m.refresh() for m in self.models]
-        except Exception as e:
-            self.quit(e)
-        else:
-            self.view.update(info, nodes, jobs)
-            loop.set_alarm_in(self.refresh_interval, self.fetch)
-
+    def on_error(self, failure):
+        self.quit(msg=str(failure))
