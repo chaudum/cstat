@@ -24,6 +24,9 @@ import json
 import urllib3
 from collections import namedtuple
 
+from .log import get_logger
+
+logger = get_logger(__name__)
 http = urllib3.PoolManager(3)
 
 
