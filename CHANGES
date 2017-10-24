@@ -2,6 +2,9 @@
 CHANGES
 =======
 
+- changed toggle key for enabling/disabling stats from F1 to F3, because the
+  Terminator terminal the F1 key is reserved for "help"
+
 - pre-calculate used and idle cpu in sql statement to avoid rounding issues
   that can cause an display overflow in CPU widget
 

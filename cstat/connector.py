@@ -51,7 +51,7 @@ ORDER BY name
 '''
 
 JOBS_QUERY = '''
-SELECT UPPER(REGEXP_MATCHES(stmt, '^\s*(\w+).*')[1]) AS stmt,
+SELECT upper(regexp_matches(stmt, '^\s*(\w+).*')[1]) AS stmt,
        min(ended - started) AS min_duration,
        max(ended - started) AS max_duration,
        avg(ended - started) AS avg_duration,
@@ -59,13 +59,17 @@ SELECT UPPER(REGEXP_MATCHES(stmt, '^\s*(\w+).*')[1]) AS stmt,
 FROM sys.jobs_log
 WHERE ended > CURRENT_TIMESTAMP - 600000
   AND error IS NULL
-GROUP BY stmt
+GROUP BY 1
 ORDER BY count DESC
 '''
 
 STATS_QUERY = '''
 SELECT settings['stats']['enabled'] AS enabled
 FROM sys.cluster
+'''
+
+STATS_STMT = '''
+SET GLOBAL TRANSIENT "stats.enabled" = ?
 '''
 
 
@@ -93,7 +97,21 @@ def json_provider(conn, path=''):
     return execute
 
 
-class Connector:
+def logging_state(conn):
+    cursor = conn.cursor()
+    cursor.execute(normalize_query(STATS_QUERY))
+    return cursor.fetchone()[0]
+
+
+def toggle_stats(conn):
+    new_state = not logging_state(conn)
+    cursor = conn.cursor()
+    cursor.execute(normalize_query(STATS_STMT), (new_state, ))
+    logger.debug('new logging state: %s', new_state)
+    return new_state
+
+
+class DataProvider:
 
     def __init__(self, connection, loop, consumer, interval=1):
         self.loop = loop

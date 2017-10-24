@@ -259,7 +259,7 @@ class MainWindow(urwid.WidgetWrap):
         self.logging_state.set_text([
             ('default', 'Logging: '),
             state,
-            ('default', ' (F1 to toggle)')
+            ('default', ' (F3 to toggle)')
         ])
         if not enabled:
             self.update_jobs(jobs=None)
@@ -382,8 +382,6 @@ class MainWindow(urwid.WidgetWrap):
                 self.disk_widget.toggle_details()
                 self.net_io_widget.toggle_details()
                 self.disk_io_widget.toggle_details()
-
-
 
     def get_active_tab(self):
         return len(self.body.contents) and \

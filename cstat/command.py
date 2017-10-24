@@ -22,8 +22,11 @@ import os
 import sys
 import urwid
 import traceback
-from .connector import Connector
+from .connector import DataProvider, toggle_stats, logging_state
 from .window import MainWindow
+from .log import get_logger
+
+logger = get_logger(__name__)
 
 
 PALETTE = [
@@ -64,7 +67,7 @@ class CrateStat:
         self.conn = conn
         self.loop = None
         self.exit_message = None
-        self.connector = None
+        self.provider = None
         self.view = None
         self.consumer = None
 
@@ -72,10 +75,10 @@ class CrateStat:
         self.loop = urwid.MainLoop(self.view, PALETTE,
                                    screen=self.screen,
                                    unhandled_input=self.on_input)
-        self.connector = Connector(self.conn,
-                                   self.loop,
-                                   self.consumer,
-                                   interval=interval)
+        self.provider = DataProvider(self.conn,
+                                     self.loop,
+                                     self.consumer,
+                                     interval=interval)
         self.loop.run()
 
     def __enter__(self):
@@ -83,6 +86,7 @@ class CrateStat:
                                        on_failure=self.on_error)
         self.view = MainWindow(self)
         self.view.update_footer(self.conn.client.active_servers)
+        self.view.set_logging_state(logging_state(self.conn))
         return self
 
     def __exit__(self, ex, msg, trace):
@@ -97,11 +101,11 @@ class CrateStat:
         raise urwid.ExitMainLoop()
 
     def on_input(self, key):
+        logger.debug('handle input: %s', key)
         if key in ('q', 'Q'):
             self.quit('Bye!')
-        elif key == 'f1':
-            self.models[2].toggle()
-            self.view.set_logging_state(self.models[2].enabled)
+        elif key == 'f3':
+            self.view.set_logging_state(toggle_stats(self.conn))
         else:
             self.view.handle_input(key)
 
