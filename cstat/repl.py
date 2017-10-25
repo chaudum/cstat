@@ -44,14 +44,20 @@ def parse_cli():
                         help='amount of time in seconds between each update',
                         default=2,
                         type=float)
+    parser.add_argument('--user', '--db-user',
+                        help='database user',
+                        default=None,
+                        type=str)
     parser.add_argument('--version', action='version', version=__version__)
     return parser.parse_args()
 
 
 def main():
     args = parse_cli()
+    conn = None
 
-    with connect(args.hosts) as conn:
+    try:
+        conn = connect(args.hosts, username=args.user)
 
         if conn.lowest_server_version == StrictVersion('0.0.0'):
             print(f'Could not connect to {args.hosts}')
@@ -63,4 +69,12 @@ def main():
         with CrateStat(screen, conn) as ui:
             ui.serve(interval=args.interval)
 
-    return EXIT_SUCCESS
+    except Exception as e:
+        print(f'An error occured while connecting to CrateDB: "{e}"')
+        return EXIT_ERROR
+    else:
+        return EXIT_SUCCESS
+    finally:
+        if conn:
+            conn.close()
+
