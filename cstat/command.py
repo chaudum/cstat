@@ -86,7 +86,6 @@ class CrateStat:
                                        on_failure=self.on_error)
         self.view = MainWindow(self)
         self.view.update_footer(self.conn.client.active_servers)
-        self.view.set_logging_state(logging_state(self.conn))
         return self
 
     def __exit__(self, ex, msg, trace):

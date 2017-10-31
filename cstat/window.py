@@ -1,6 +1,4 @@
-# -*- coding: utf-8; -*-
 # vi: set encoding=utf-8
-#
 # Licensed to CRATE Technology GmbH ("Crate") under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  Crate licenses
@@ -30,8 +28,12 @@ from .widgets import (
     HorizontalBytesBar,
     IOStatWidget,
 )
+from .log import get_logger
+
+logger = get_logger(__name__)
 
 RE_PADDING = re.compile('^(\s*)(.*[^\s])(\s*)$')
+UNDEFINED = [('text_red', '-')]
 
 
 def padded_text(text):
@@ -124,11 +126,15 @@ class MainWindow(urwid.WidgetWrap):
         self.logging_state = urwid.Text([('headline', 'Jobs Logging')])
         self.logs = urwid.SimpleFocusListWalker([])
 
-        self.t_cluster_name = urwid.Text('-')
-        self.t_version = urwid.Text('-')
+        self.t_cluster_name = urwid.Text(UNDEFINED)
+        self.t_version = urwid.Text(UNDEFINED)
+        self.t_hosts = urwid.Text(UNDEFINED)
+        self.t_stats_enabled = urwid.Text(UNDEFINED)
+        self.t_enterprise_enabled = urwid.Text(UNDEFINED)
+        self.t_udc_enabled = urwid.Text(UNDEFINED)
+
+        self.t_handler = urwid.Text(UNDEFINED)
         self.t_load = urwid.Text('-/-/-', align='right')
-        self.t_hosts = urwid.Text('-')
-        self.t_handler = urwid.Text('-')
 
         self.menu1 = Menu([
             MenuItem('0', 'Info'),
@@ -157,23 +163,28 @@ class MainWindow(urwid.WidgetWrap):
         ])
 
         footer = urwid.AttrMap(urwid.Columns([
+            self.t_handler,
             self.t_load,
         ], dividechars=1), 'inverted')
 
         self.tab_1 = Tab([
             urwid.LineBox(
                 urwid.Columns([
-                    (10, urwid.Pile([
+                    (12, urwid.Pile([
                         urwid.Text('Cluster'),
                         urwid.Text('Version'),
-                        urwid.Text('Handler'),
                         urwid.Text('Hosts'),
+                        urwid.Text('stats'),
+                        urwid.Text('enterprise'),
+                        urwid.Text('udc'),
                     ])),
                     urwid.Pile([
                         self.t_cluster_name,
                         self.t_version,
-                        self.t_handler,
                         self.t_hosts,
+                        self.t_stats_enabled,
+                        self.t_enterprise_enabled,
+                        self.t_udc_enabled,
                     ]),
                 ]), title='Cluster Info'
             ),
@@ -227,13 +238,15 @@ class MainWindow(urwid.WidgetWrap):
         return urwid.Frame(urwid.Filler(body, valign='top'),
                            header=menu, footer=footer)
 
-    def update(self, info=None, nodes=[], jobs=[]):
+    def update(self, info=None, nodes=[], jobs=[], settings=[]):
         if info:
             self.update_info(info)
         if nodes:
             self.update_nodes(nodes)
         if jobs:
             self.update_jobs(jobs)
+        if settings:
+            self.update_settings(settings[0])
 
     def update_jobs(self, jobs=[]):
         if jobs is None:
@@ -254,11 +267,13 @@ class MainWindow(urwid.WidgetWrap):
             (10, urwid.Text([('text_red', max)], align='right')),
         ], dividechars=1)
 
+    def _state(self, enabled):
+        return enabled and ('bg_green', 'enabled') or ('bg_red', 'disabled')
+
     def set_logging_state(self, enabled):
-        state = enabled and ('bg_green', 'ON') or ('bg_red', 'OFF')
         self.logging_state.set_text([
             ('default', 'Logging: '),
-            state,
+            self._state(enabled),
             ('default', ' (F3 to toggle)')
         ])
         if not enabled:
@@ -318,7 +333,7 @@ class MainWindow(urwid.WidgetWrap):
         self.net_io_widget.set_data(net_io)
         self.disk_io_widget.set_data(disk_io)
         self.t_load.set_text('{0:.2f}/{1:.2f}/{2:.2f}'.format(*load))
-        self.t_hosts.set_text(', '.join([n.hostname for n in data]))
+        self.t_hosts.set_text(str(len(data)))
 
     def _data_disks(self, data):
         data_disks = [disk['dev'] for disk in data['data']]
@@ -342,14 +357,20 @@ class MainWindow(urwid.WidgetWrap):
 
     def update_info(self, info=None):
         if info is None:
-            self.t_cluster_name.set_text([('text_red', '---')])
-            self.t_version.set_text([('text_red', '---')])
+            self.t_cluster_name.set_text(UNDEFINED)
+            self.t_version.set_text(UNDEFINED)
         else:
             self.t_cluster_name.set_text(info['cluster_name'])
             self.t_version.set_text(info['version']['number'])
 
     def update_footer(self, hosts):
         self.t_handler.set_text(' '.join(hosts))
+
+    def update_settings(self, settings):
+        self.set_logging_state(settings.stats_enabled)
+        self.t_stats_enabled.set_text([self._state(settings.stats_enabled)])
+        self.t_enterprise_enabled.set_text([self._state(settings.enterprise_enabled)])
+        self.t_udc_enabled.set_text([self._state(settings.udc_enabled)])
 
     def handle_input(self, key):
         if self.menu1.can_handle_input(key):

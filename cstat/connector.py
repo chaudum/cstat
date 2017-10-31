@@ -63,8 +63,10 @@ GROUP BY 1
 ORDER BY count DESC
 '''
 
-STATS_QUERY = '''
-SELECT settings['stats']['enabled'] AS enabled
+SETTINGS_QUERY = '''
+SELECT settings['stats']['enabled'] AS "stats_enabled",
+       settings['license']['enterprise'] AS "enterprise_enabled",
+       settings['udc']['enabled'] AS "udc_enabled"
 FROM sys.cluster
 '''
 
@@ -99,7 +101,7 @@ def json_provider(conn, path=''):
 
 def logging_state(conn):
     cursor = conn.cursor()
-    cursor.execute(normalize_query(STATS_QUERY))
+    cursor.execute(normalize_query(SETTINGS_QUERY))
     return cursor.fetchone()[0]
 
 
@@ -121,7 +123,9 @@ class DataProvider:
             ('info', json_provider(connection, '')),
             ('nodes', sql_provider(connection, NODE_QUERY)),
             ('jobs', sql_provider(connection, JOBS_QUERY)),
+            ('settings', sql_provider(connection, SETTINGS_QUERY)),
         ]
+        self.last_state = {}
         self.loop.set_alarm_in(0.1, self.fetch)
 
     def fetch(self, loop, *args):
@@ -132,4 +136,8 @@ class DataProvider:
             self.consumer.apply(failure=e)
         else:
             self.consumer.apply(state)
+            self.last_state = state
             loop.set_alarm_in(self.interval, self.fetch)
+
+    def __getitem__(self, key):
+        return self.last_state.get(key)
