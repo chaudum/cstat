@@ -1,6 +1,4 @@
-# -*- coding: utf-8; -*-
 # vi: set encoding=utf-8
-#
 # Licensed to CRATE Technology GmbH ("Crate") under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  Crate licenses
@@ -27,12 +25,10 @@ from .utils import byte_size
 
 class BarWidgetBase(urwid.Text):
 
-    START = '['
-    END   = ']'
-
-    STAR = '*'
-    EQUI = '='
-    PIPE = '|'
+    START  = '['
+    END    = ']'
+    SINGLE = '='
+    DOUBLE = '#'
 
     WATERMARK_LOW  = 0.80
     WATERMARK_HIGH = 0.95
@@ -48,7 +44,7 @@ class BarWidgetBase(urwid.Text):
 
 class HorizontalBar(BarWidgetBase):
 
-    def __init__(self, label, current=0.0, total=100.0, symbol=BarWidgetBase.PIPE):
+    def __init__(self, label, current=0.0, total=100.0, symbol=BarWidgetBase.DOUBLE):
         super().__init__(label, symbol)
         self.set_progress(current, total)
 
@@ -120,7 +116,7 @@ class MultiBarWidget(urwid.Pile):
         bars = []
         for value in self._history:
             bar = self.bar_cls(value[2], value[0], value[1],
-                               symbol=BarWidgetBase.STAR)
+                               symbol=HorizontalBar.SINGLE)
             bars.append((bar, ('pack', None)))
         self.details.contents = bars
         return len(bars)
@@ -238,4 +234,3 @@ class IOStatWidget(MultiBarWidget):
         tx = (values['tx'] - prev_values['tx']) / diff
         rx = (values['rx'] - prev_values['rx']) / diff
         return tx, rx
-
