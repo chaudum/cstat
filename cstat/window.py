@@ -237,19 +237,22 @@ class MainWindow(urwid.WidgetWrap):
             self.tab_holder,
         ])
 
-        self.update_info(None)
         return urwid.Frame(urwid.Filler(body, valign='top'),
                            header=menu, footer=footer)
 
-    def update(self, info=None, nodes=[], jobs=[], settings=[]):
-        if info:
-            self.update_info(info)
-        if nodes:
-            self.update_nodes(nodes)
-        if jobs:
-            self.update_jobs(jobs)
-        if settings:
-            self.update_settings(settings[0])
+    def update(self, **kwargs):
+        if kwargs.get('nodes'):
+            state = kwargs.get('nodes')
+            self.update_nodes(state)
+        if kwargs.get('jobs'):
+            state = kwargs.get('jobs')
+            self.update_jobs(state)
+        if kwargs.get('settings'):
+            state = kwargs.get('settings')
+            self.update_settings(state[0])
+        if kwargs.get('version'):
+            state = kwargs.get('version')
+            self.t_version.set_text(state[0].version)
 
     def update_jobs(self, jobs=[]):
         if jobs is None:
@@ -280,6 +283,7 @@ class MainWindow(urwid.WidgetWrap):
         return enabled and ('bg_green', 'enabled') or ('bg_red', 'disabled')
 
     def set_logging_state(self, enabled):
+        logger.debug('set_logging_state: %s', enabled)
         self.logging_state.set_text([
             ('default', 'Logging: '),
             self._state(enabled),
@@ -288,7 +292,7 @@ class MainWindow(urwid.WidgetWrap):
         if not enabled:
             self.update_jobs(jobs=None)
 
-    def update_nodes(self, data=[]):
+    def update_nodes(self, data):
         cpu = []
         process = []
         heap = []
@@ -297,11 +301,11 @@ class MainWindow(urwid.WidgetWrap):
         net_io = []
         disk_io = []
         load = [0.0, 0.0, 0.0]
-        num = float(len(data))
+        num = 0
         for node in data:
             cpu.append([
-                node.cpu_used,
-                node.cpu_used + node.cpu_idle,
+                min(node.cpu_used, 100),
+                100,
                 node.name,
             ])
             process.append([
@@ -333,7 +337,8 @@ class MainWindow(urwid.WidgetWrap):
                 node.name,
             ])
             for idx, k in enumerate(['1', '5', '15']):
-                load[idx] += node.load[k] / num
+                load[idx] += node.load[k]
+            num += 1
         self.memory_widget.set_data(memory)
         self.heap_widget.set_data(heap)
         self.cpu_widget.set_data(cpu)
@@ -341,8 +346,11 @@ class MainWindow(urwid.WidgetWrap):
         self.disk_widget.set_data(disk)
         self.net_io_widget.set_data(net_io)
         self.disk_io_widget.set_data(disk_io)
-        self.t_load.set_text('{0:.2f}/{1:.2f}/{2:.2f}'.format(*load))
-        self.t_hosts.set_text(str(len(data)))
+        self.t_hosts.set_text(str(num))
+        self.t_load.set_text('{0:.2f}/{1:.2f}/{2:.2f}'.format(
+            *[x / num for x in load]
+        ))
+        self.t_handler.set_text(', '.join([n.hostname for n in data]))
 
     def _data_disks(self, data):
         data_disks = [disk['dev'] for disk in data['data']]
@@ -364,22 +372,12 @@ class MainWindow(urwid.WidgetWrap):
             io['rx'] += disk['bytes_read']
         return io
 
-    def update_info(self, info=None):
-        if info is None:
-            self.t_cluster_name.set_text(UNDEFINED)
-            self.t_version.set_text(UNDEFINED)
-        else:
-            self.t_cluster_name.set_text(info['cluster_name'])
-            self.t_version.set_text(info['version']['number'])
-
-    def update_footer(self, hosts):
-        self.t_handler.set_text(' '.join(hosts))
-
     def update_settings(self, settings):
         self.set_logging_state(settings.stats_enabled)
         self.t_stats_enabled.set_text([self._state(settings.stats_enabled)])
         self.t_enterprise_enabled.set_text([self._state(settings.enterprise_enabled)])
         self.t_udc_enabled.set_text([self._state(settings.udc_enabled)])
+        self.t_cluster_name.set_text([settings.name])
 
     def handle_input(self, key):
         if self.menu1.can_handle_input(key):

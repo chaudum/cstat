@@ -21,6 +21,9 @@
 import urwid
 from datetime import datetime
 from .utils import byte_size
+from .log import get_logger
+
+logger = get_logger(__name__)
 
 
 class BarWidgetBase(urwid.Text):
@@ -122,6 +125,7 @@ class MultiBarWidget(urwid.Pile):
         return len(bars)
 
     def sum(self, values=[]):
+        logger.debug('%s', [sum([x[0] for x in values]), sum([x[1] for x in values])])
         return (sum([x[0] for x in values]), sum([x[1] for x in values]))
 
     def set_data(self, values=[]):
@@ -230,7 +234,7 @@ class IOStatWidget(MultiBarWidget):
         prev_timestamp, prev_values, prev_name = last_value
         timestamp, values, name = value
         assert prev_name == name
-        diff = (timestamp - prev_timestamp) / 1000.0
+        diff = (timestamp - prev_timestamp).total_seconds()
         tx = (values['tx'] - prev_values['tx']) / diff
         rx = (values['rx'] - prev_values['rx']) / diff
         return tx, rx

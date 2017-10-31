@@ -47,7 +47,7 @@ setup(
     },
     install_requires=[
         'appdirs',
-        'crate',
+        'aiopg',
         'colorama',
         'urwid',
     ],

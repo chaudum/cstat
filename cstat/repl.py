@@ -19,9 +19,7 @@
 # software solely pursuant to the terms of the relevant commercial agreement.
 
 import argparse
-from distutils.version import StrictVersion
-from urwid.raw_display import Screen
-from crate.client import connect
+import asyncio
 from .command import CrateStat
 
 
@@ -36,10 +34,14 @@ def parse_cli():
     """
     parser = argparse.ArgumentParser('cstat',
                                      description='A visual stat tool for CrateDB clusters')
-    parser.add_argument('--hosts', '--crate-hosts',
-                        help='one or more CrateDB hosts to connect to',
-                        type=str, nargs='+', metavar='HOST',
-                        default=['localhost:4200'])
+    parser.add_argument('--host', '--crate-host',
+                        help='CrateDB host to connect to',
+                        type=str, metavar='HOST',
+                        default='127.0.0.1')
+    parser.add_argument('--port', '--psql-port',
+                        help='PSQL port of CrateDB host',
+                        type=int, metavar='PORT',
+                        default=5432)
     parser.add_argument('--interval', '--refresh-interval',
                         help='amount of time in seconds between each update',
                         default=2,
@@ -52,22 +54,10 @@ def parse_cli():
     return parser.parse_args()
 
 
-def main():
-    args = parse_cli()
+async def _repl(loop, args):
     conn = None
-
     try:
-        conn = connect(args.hosts, username=args.user)
-
-        if conn.lowest_server_version == StrictVersion('0.0.0'):
-            print(f'Could not connect to {args.hosts}')
-            return EXIT_ERROR
-
-        screen = Screen()
-        screen.set_terminal_properties(256)
-
-        with CrateStat(screen, conn) as ui:
-            ui.serve(interval=args.interval)
+        c, v = _connect(args)
 
     except Exception as e:
         print(f'An error occured while connecting to CrateDB: "{e}"')
@@ -76,5 +66,11 @@ def main():
         return EXIT_SUCCESS
     finally:
         if conn:
-            conn.close()
+            await conn.close()
 
+
+def main():
+    args = parse_cli()
+    aioloop = asyncio.get_event_loop()
+    ui = CrateStat(args)
+    ui.serve(aioloop)

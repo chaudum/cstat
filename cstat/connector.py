@@ -21,22 +21,23 @@
 
 import re
 import json
-import urllib3
+import aiopg
+import asyncio
+import functools
 from collections import namedtuple
-
 from .log import get_logger
 
 logger = get_logger(__name__)
-http = urllib3.PoolManager(3)
+NamedQuery = namedtuple('NamedQuery', ['name', 'stmt', 'args'])
 
 
-NODE_QUERY = '''
+NODE_QUERY = NamedQuery('nodes', '''
 SELECT id,
        name,
        hostname,
        format('%s:%d', hostname, port['http']) as host,
-       GREATEST(0, LEAST((os['cpu']['system'] + os['cpu']['user'] + os['cpu']['stolen'])::LONG, 100)) AS cpu_used,
-       GREATEST(0, LEAST((os['cpu']['idle'])::LONG, 100)) AS cpu_idle,
+       os['cpu']['system'] + os['cpu']['user'] + os['cpu']['stolen'] AS cpu_used,
+       os['cpu']['idle'] AS cpu_idle,
        os['timestamp'] as hosttime,
        process['cpu'] as process,
        os_info['available_processors'] as cpus,
@@ -48,9 +49,9 @@ SELECT id,
        network['tcp']['packets'] as net_packets
 FROM sys.nodes
 ORDER BY name
-'''
+''', None)
 
-JOBS_QUERY = '''
+JOBS_QUERY = NamedQuery('jobs', '''
 SELECT upper(regexp_matches(stmt, '^\s*(\w+).*')[1]) AS stmt,
        min(ended - started) AS "min",
        avg(ended - started) AS "avg",
@@ -60,87 +61,94 @@ SELECT upper(regexp_matches(stmt, '^\s*(\w+).*')[1]) AS stmt,
        percentile(ended - started, 0.99) AS "perc99",
        count(*) AS count
 FROM sys.jobs_log
-WHERE ended > CURRENT_TIMESTAMP - 600000
+WHERE ended > CURRENT_TIMESTAMP - 60000
   AND error IS NULL
 GROUP BY 1
 ORDER BY count DESC
-'''
+''', None)
 
-SETTINGS_QUERY = '''
-SELECT settings['stats']['enabled'] AS "stats_enabled",
+SETTINGS_QUERY = NamedQuery('settings', '''
+SELECT name,
+       settings['stats']['enabled'] AS "stats_enabled",
        settings['license']['enterprise'] AS "enterprise_enabled",
        settings['udc']['enabled'] AS "udc_enabled"
 FROM sys.cluster
-'''
+''', None)
+
+VERSION_QUERY = NamedQuery('version', '''
+SELECT min(version['number']) AS version FROM sys.nodes
+''', None)
 
 STATS_STMT = '''
-SET GLOBAL TRANSIENT "stats.enabled" = ?
+SET GLOBAL TRANSIENT "stats.enabled" = %s
 '''
 
 
-def normalize_query(query):
-    return re.sub('\n|\s+', ' ', query).strip('\n ')
+def unwrap_task_result(callback):
+    def inner(t):
+        callback(t.result())
+    return inner
 
 
-def sql_provider(conn, query):
-    cursor = conn.cursor()
-    q = normalize_query(query)
-    def execute():
-        cursor.execute(q)
-        Row = namedtuple('Row', [c[0] for c in cursor.description])
-        return [Row(*r) for r in cursor.fetchall()]
-    return execute
+def toggle_stats(current_value, pool, callback):
+    set_stmt = NamedQuery('toggle_stats', STATS_STMT, [not current_value])
+    task = asyncio.ensure_future(exec_query(pool, [set_stmt, SETTINGS_QUERY]))
+    task.add_done_callback(unwrap_task_result(callback))
 
 
-def json_provider(conn, path=''):
-    host = conn.client.active_servers[0]
-    def execute():
-        response = http.request('GET', host + path)
-        return response.status == 200 \
-            and json.loads(response.data.decode('utf-8')) \
-            or None
-    return execute
+def resultset(cursor):
+    Record = namedtuple('Record', [c.name for c in cursor.description])
+    return [Record(*r) for r in cursor]
 
 
-def logging_state(conn):
-    cursor = conn.cursor()
-    cursor.execute(normalize_query(SETTINGS_QUERY))
-    return cursor.fetchone()[0]
+async def pool(args):
+    return await aiopg.create_pool(host=args.host, port=args.port,
+                                   user=args.user, password=None,
+                                   enable_json=False, enable_hstore=False,
+                                   enable_uuid=False)
 
 
-def toggle_stats(conn):
-    new_state = not logging_state(conn)
-    cursor = conn.cursor()
-    cursor.execute(normalize_query(STATS_STMT), (new_state, ))
-    logger.debug('new logging state: %s', new_state)
-    return new_state
+async def exec_query(pool, queries):
+    rs = {}
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cur:
+            for name, stmt, params in queries:
+                await cur.execute(stmt, params)
+                rs[name] = resultset(cur) if cur.rowcount > -1 else None
+    return rs
 
 
 class DataProvider:
 
-    def __init__(self, connection, loop, consumer, interval=1):
-        self.loop = loop
+    PROVIDERS = [
+        VERSION_QUERY,
+        NODE_QUERY,
+        JOBS_QUERY,
+        SETTINGS_QUERY,
+    ]
+
+    def __init__(self, pool, consumer, interval):
+        self.pool = pool
         self.interval = interval
         self.consumer = consumer
-        self.providers = [
-            ('info', json_provider(connection, '')),
-            ('nodes', sql_provider(connection, NODE_QUERY)),
-            ('jobs', sql_provider(connection, JOBS_QUERY)),
-            ('settings', sql_provider(connection, SETTINGS_QUERY)),
-        ]
-        self.last_state = {}
-        self.loop.set_alarm_in(0.1, self.fetch)
+        self.state = {}
+        self.fetch()
 
-    def fetch(self, loop, *args):
+    def fetch(self, *args):
+        task = asyncio.ensure_future(exec_query(self.pool, self.PROVIDERS))
+        task.add_done_callback(self.on_result)
+
+    def on_result(self, t):
         try:
-            state = {n: p() for n, p in self.providers}
+            state = t.result()
         except Exception as e:
-            logger.error(e)
             self.consumer.apply(failure=e)
         else:
             self.consumer.apply(state)
-            self.last_state = state
-            loop.set_alarm_in(self.interval, self.fetch)
+            self.state.update(state)
+        finally:
+            loop = asyncio.get_event_loop()
+            loop.call_later(self.interval, self.fetch)
 
     def __getitem__(self, key):
-        return self.last_state.get(key)
+        return self.state.get(key)

@@ -21,8 +21,11 @@
 import os
 import sys
 import urwid
+import asyncio
 import traceback
-from .connector import DataProvider, toggle_stats, logging_state
+from distutils.version import StrictVersion
+from urwid.raw_display import Screen
+from .connector import DataProvider, pool, toggle_stats
 from .window import MainWindow
 from .log import get_logger
 
@@ -62,41 +65,38 @@ class ResultConsumer:
 
 class CrateStat:
 
-    def __init__(self, screen, conn):
-        self.screen = screen
-        self.conn = conn
+    def __init__(self, args):
+        self._args = args
+        self.pool = None
         self.loop = None
         self.exit_message = None
-        self.provider = None
         self.view = None
-        self.consumer = None
 
-    def serve(self, interval=5):
+    def serve(self, aioloop):
+        screen = Screen()
+        screen.set_terminal_properties(256)
+        self.view = MainWindow(self)
         self.loop = urwid.MainLoop(self.view, PALETTE,
-                                   screen=self.screen,
+                                   screen=screen,
+                                   event_loop=urwid.AsyncioEventLoop(loop=aioloop),
                                    unhandled_input=self.on_input)
-        self.provider = DataProvider(self.conn,
-                                     self.loop,
-                                     self.consumer,
-                                     interval=interval)
+        task = asyncio.ensure_future(pool(self._args))
+        task.add_done_callback(self.on_connect)
         self.loop.run()
 
-    def __enter__(self):
-        self.consumer = ResultConsumer(on_result=self.on_data,
-                                       on_failure=self.on_error)
-        self.view = MainWindow(self)
-        self.view.update_footer(self.conn.client.active_servers)
-        return self
-
-    def __exit__(self, ex, msg, trace):
-        if self.exit_message:
-            print(self.exit_message, file=sys.stderr)
-        elif ex:
-            for line in traceback.format_tb(trace):
-                print(line, file=sys.stderr)
+    def on_connect(self, t):
+        self.pool = t.result()
+        consumer = ResultConsumer(on_result=self.on_data,
+                                  on_failure=self.on_error)
+        self.provider = DataProvider(self.pool,
+                                     consumer,
+                                     interval=self._args.interval)
+        logger.debug('on_connect: %s %s %s',
+                     self.pool, consumer, self.provider)
 
     def quit(self, msg=None):
-        self.exit_message = msg
+        if msg:
+            print(msg, file=sys.stderr)
         raise urwid.ExitMainLoop()
 
     def on_input(self, key):
@@ -104,7 +104,8 @@ class CrateStat:
         if key in ('q', 'Q'):
             self.quit('Bye!')
         elif key == 'f3':
-            self.view.set_logging_state(toggle_stats(self.conn))
+            current_value = self.provider['settings'][0].stats_enabled
+            toggle_stats(current_value, self.pool, self.on_data)
         else:
             self.view.handle_input(key)
 
