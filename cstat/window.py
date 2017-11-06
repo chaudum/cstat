@@ -218,11 +218,14 @@ class MainWindow(urwid.WidgetWrap):
         self.tab_4 = Tab([
             self.logging_state,
             urwid.AttrMap(urwid.Columns([
-                urwid.Text('Statement Type'),
-                (10, urwid.Text('Count', align='right')),
-                (10, urwid.Text('Min', align='right')),
-                (10, urwid.Text('Avg', align='right')),
-                (10, urwid.Text('Max', align='right')),
+                urwid.Text('statement'),
+                (7, urwid.Text('count', align='right')),
+                (7, urwid.Text('min', align='right')),
+                (7, urwid.Text('mean', align='right')),
+                (7, urwid.Text('avg', align='right')),
+                (7, urwid.Text('p95', align='right')),
+                (7, urwid.Text('p99', align='right')),
+                (7, urwid.Text('max', align='right')),
             ], dividechars=1), 'head'),
             urwid.BoxAdapter(urwid.ListBox(self.logs), height=10),
         ], 'Jobs Logging', 'default')
@@ -253,18 +256,24 @@ class MainWindow(urwid.WidgetWrap):
             self.logs[:] = []
         elif jobs:
             self.logs[:] = [self._jobs_row('{0}'.format(r.count),
-                                           '{0:.0f}ms'.format(r.min_duration),
-                                           '{0:.0f}ms'.format(r.max_duration),
-                                           '{0:.0f}ms'.format(r.avg_duration),
+                                           '{0:.0f}ms'.format(r.min),
+                                           '{0:.0f}ms'.format(r.max),
+                                           '{0:.0f}ms'.format(r.avg),
+                                           '{0:.0f}ms'.format(r.median),
+                                           '{0:.0f}ms'.format(r.perc95),
+                                           '{0:.0f}ms'.format(r.perc99),
                                            r.stmt) for r in jobs]
 
-    def _jobs_row(self, count, min, max, avg, stmt):
+    def _jobs_row(self, count, min, max, avg, mean, perc95, perc99, stmt):
         return urwid.Columns([
             urwid.Text([('default', stmt) if stmt else ('bg_red', '???')]),
-            (10, urwid.Text([('default', count)], align='right')),
-            (10, urwid.Text([('text_green', min)], align='right')),
-            (10, urwid.Text([('text_yellow', avg)], align='right')),
-            (10, urwid.Text([('text_red', max)], align='right')),
+            (7, urwid.Text([('default', count)], align='right')),
+            (7, urwid.Text([('text_green', min)], align='right')),
+            (7, urwid.Text([('text_yellow', mean)], align='right')),
+            (7, urwid.Text([('text_yellow', avg)], align='right')),
+            (7, urwid.Text([('text_yellow', perc95)], align='right')),
+            (7, urwid.Text([('text_yellow', perc99)], align='right')),
+            (7, urwid.Text([('text_red', max)], align='right')),
         ], dividechars=1)
 
     def _state(self, enabled):

@@ -52,9 +52,12 @@ ORDER BY name
 
 JOBS_QUERY = '''
 SELECT upper(regexp_matches(stmt, '^\s*(\w+).*')[1]) AS stmt,
-       min(ended - started) AS min_duration,
-       max(ended - started) AS max_duration,
-       avg(ended - started) AS avg_duration,
+       min(ended - started) AS "min",
+       avg(ended - started) AS "avg",
+       max(ended - started) AS "max",
+       percentile(ended - started, 0.5) AS "median",
+       percentile(ended - started, 0.95) AS "perc95",
+       percentile(ended - started, 0.99) AS "perc99",
        count(*) AS count
 FROM sys.jobs_log
 WHERE ended > CURRENT_TIMESTAMP - 600000
