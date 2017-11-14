@@ -2,6 +2,8 @@
 CHANGES
 =======
 
+- asynchronous database access via aiopg
+
 - added median, percentile 95, and percentile 99 to query stats table
 
 - added --user/--db-user argument to support user authentication
