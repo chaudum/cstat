@@ -22,9 +22,9 @@ import sys
 
 from setuptools import setup, find_packages
 
-def readme():
+def contents(filename):
     try:
-        with open('README.rst', 'rb') as fp:
+        with open(filename, 'rb') as fp:
             return fp.read().decode('utf-8')
     except Exception:
         return ''
@@ -36,7 +36,7 @@ setup(
     author_email='christian.haudum@crate.io',
     url='https://github.com/chaudum/crate-top',
     description='A visual stat tool for CrateDB clusters',
-    long_description=readme(),
+    long_description=contents('README.rst') + '\n\n' + contents('CHANGES.rst'),
     platforms=['any'],
     license='Apache License 2.0',
     packages=['cstat'],

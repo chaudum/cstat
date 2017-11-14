@@ -64,13 +64,13 @@ otherwise specified.
 Keyboard Shortcuts
 ==================
 
-* ``0``  ... toggle cluster info
-* ``1``  ... show utilization for CPU, process, memory, heap and disk
-* ``2``  ... show I/O statistics for network and disk
-* ``3``  ... show aggregated query duration based on jobs_log_
-* ``x``  ... toggle nodes/aggregation view
-* ``f3`` ... enable/disable job logging (this also sets the ``stats.jobs_log``
-cluster setting)
+- ``0``  ... toggle cluster info
+- ``1``  ... show utilization for CPU, process, memory, heap and disk
+- ``2``  ... show I/O statistics for network and disk
+- ``3``  ... show aggregated query duration based on jobs_log_
+- ``x``  ... toggle nodes/aggregation view
+- ``f3`` ... enable/disable job logging (this also sets the ``stats.jobs_log``
+  cluster setting)
 
 Known Issues
 ============
