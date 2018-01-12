@@ -22,10 +22,21 @@ import argparse
 import asyncio
 from .command import CrateStat
 
-
 __version__ = '0.1.0'
 
 EXIT_SUCCESS, EXIT_ERROR = 0, 1
+
+
+def red(text: str) -> str:
+    return f'\033[31m{text}\033[0m'
+
+
+def blue(text: str) -> str:
+    return f'\033[34m{text}\033[0m'
+
+
+def yellow(text: str) -> str:
+    return f'\033[33m{text}\033[0m'
 
 
 def parse_cli():
@@ -54,23 +65,16 @@ def parse_cli():
     return parser.parse_args()
 
 
-async def _repl(loop, args):
-    conn = None
-    try:
-        c, v = _connect(args)
-
-    except Exception as e:
-        print(f'An error occured while connecting to CrateDB: "{e}"')
-        return EXIT_ERROR
-    else:
-        return EXIT_SUCCESS
-    finally:
-        if conn:
-            await conn.close()
-
-
 def main():
     args = parse_cli()
     aioloop = asyncio.get_event_loop()
     ui = CrateStat(args)
-    ui.serve(aioloop)
+    try:
+        ui.serve(aioloop)
+    except Exception as e:
+        print(red('An error occured: ') + str(e))
+        print('Please file a bug report on https://github.com/chaudum/crate-top/issues')
+        return EXIT_ERROR
+    else:
+        print(yellow('Bye!'))
+        return EXIT_SUCCESS

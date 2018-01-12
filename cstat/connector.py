@@ -25,18 +25,48 @@ import aiopg
 import asyncio
 import functools
 from collections import namedtuple
+from typing import NamedTuple
+from distutils.version import StrictVersion
 from .log import get_logger
 
 logger = get_logger(__name__)
-NamedQuery = namedtuple('NamedQuery', ['name', 'stmt', 'args'])
 
 
-NODE_QUERY = NamedQuery('nodes', '''
+class NamedQuery(NamedTuple):
+    name: str
+    stmt: str
+    args: list
+
+
+CRATE_2_0 = StrictVersion('2.0')
+CRATE_2_3 = StrictVersion('2.3')
+
+NODE_QUERY_V_2_0 = NamedQuery('nodes', '''
 SELECT id,
        name,
        hostname,
        format('%s:%d', hostname, port['http']) as host,
        os['cpu']['system'] + os['cpu']['user'] + os['cpu']['stolen'] AS cpu_used,
+       os['cpu']['idle'] AS cpu_idle,
+       os['timestamp'] as hosttime,
+       process['cpu'] as process,
+       os_info['available_processors'] as cpus,
+       load,
+       heap,
+       mem,
+       fs,
+       network['probe_timestamp'] as net_timestamp,
+       network['tcp']['packets'] as net_packets
+FROM sys.nodes
+ORDER BY name
+''', None)
+
+NODE_QUERY_V_2_3 = NamedQuery('nodes', '''
+SELECT id,
+       name,
+       hostname,
+       format('%s:%d', hostname, port['http']) as host,
+       os['cpu']['used'] AS cpu_used,
        os['cpu']['idle'] AS cpu_idle,
        os['timestamp'] as hosttime,
        process['cpu'] as process,
@@ -90,6 +120,11 @@ def unwrap_task_result(callback):
     return inner
 
 
+def get_version(pool, callback):
+    task = asyncio.ensure_future(exec_query(pool, [VERSION_QUERY]))
+    task.add_done_callback(unwrap_task_result(callback))
+
+
 def toggle_stats(current_value, pool, callback):
     set_stmt = NamedQuery('toggle_stats', STATS_STMT, [not current_value])
     task = asyncio.ensure_future(exec_query(pool, [set_stmt, SETTINGS_QUERY]))
@@ -122,7 +157,6 @@ class DataProvider:
 
     PROVIDERS = [
         VERSION_QUERY,
-        NODE_QUERY,
         JOBS_QUERY,
         SETTINGS_QUERY,
     ]
@@ -132,6 +166,17 @@ class DataProvider:
         self.interval = interval
         self.consumer = consumer
         self.state = {}
+        get_version(self.pool, self.on_version)
+
+    def on_version(self, data):
+        crate_version = StrictVersion(data['version'][0].version)
+        logger.debug('version %s', crate_version)
+        if crate_version >= CRATE_2_3:
+            self.PROVIDERS += [NODE_QUERY_V_2_3]
+        elif crate_version >= CRATE_2_0:
+            self.PROVIDERS += [NODE_QUERY_V_2_0]
+        else:
+            raise ValueError('CrateDB {crate_version} is not supported.')
         self.fetch()
 
     def fetch(self, *args):

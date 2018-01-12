@@ -91,13 +91,11 @@ class CrateStat:
         self.provider = DataProvider(self.pool,
                                      consumer,
                                      interval=self._args.interval)
-        logger.debug('on_connect: %s %s %s',
-                     self.pool, consumer, self.provider)
+        logger.debug('connected to %s', self.pool)
 
     def quit(self, msg=None):
-        if msg:
-            print(msg, file=sys.stderr)
-        raise urwid.ExitMainLoop()
+        logger.info('quit: %s', msg)
+        raise urwid.ExitMainLoop(msg)
 
     def on_input(self, key):
         logger.debug('handle input: %s', key)

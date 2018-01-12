@@ -5,6 +5,8 @@ Changelog for cstat
 Unreleased
 ==========
 
+- Make cstat compatible with CrateDB version 2.3.0 and greater.
+
 0.2.0
 =====
 
