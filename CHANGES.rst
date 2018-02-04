@@ -5,6 +5,10 @@ Changelog for cstat
 Unreleased
 ==========
 
+- Added ``-V`` (prompt for username) argument.
+
+- Added ``--password`` and ``-W`` (prompt for password) arguments.
+
 - Make cstat compatible with CrateDB version 2.3.0 and greater.
 
 0.2.0

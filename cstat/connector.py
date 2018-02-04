@@ -138,7 +138,7 @@ def resultset(cursor):
 
 async def pool(args):
     return await aiopg.create_pool(host=args.host, port=args.port,
-                                   user=args.user, password=None,
+                                   user=args.user, password=args.password,
                                    enable_json=False, enable_hstore=False,
                                    enable_uuid=False)
 

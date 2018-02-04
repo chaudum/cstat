@@ -18,8 +18,9 @@
 # with Crate these terms will supersede the license and you may use the
 # software solely pursuant to the terms of the relevant commercial agreement.
 
-import argparse
 import asyncio
+import getpass
+import argparse
 from .command import CrateStat
 
 __version__ = '0.1.0'
@@ -61,12 +62,28 @@ def parse_cli():
                         help='database user',
                         default=None,
                         type=str)
+    parser.add_argument('-V', '--prompt-user',
+                        help='prompt for user name',
+                        action='store_true',
+                        default=False)
+    parser.add_argument('--password', '--db-password',
+                        help='user password',
+                        default=None,
+                        type=str)
+    parser.add_argument('-W', '--prompt-password',
+                        help='prompt for user password',
+                        action='store_true',
+                        default=False)
     parser.add_argument('--version', action='version', version=__version__)
     return parser.parse_args()
 
 
 def main():
     args = parse_cli()
+    if args.prompt_user and not args.user:
+        args.user = input('User: ')
+    if args.prompt_password and not args.password:
+        args.password = getpass.getpass()
     aioloop = asyncio.get_event_loop()
     ui = CrateStat(args)
     try:
