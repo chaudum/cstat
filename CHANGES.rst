@@ -5,6 +5,11 @@ Changelog for cstat
 Unreleased
 ==========
 
+- Updated process CPU usage calculation to work with CrateDB 2.3 and newer.
+
+- Updated disk usage and disk i/o calculation to work with CrateDB 2.3 and
+  newer.
+
 - Added ``-V`` (prompt for username) argument.
 
 - Added ``--password`` and ``-W`` (prompt for password) arguments.
