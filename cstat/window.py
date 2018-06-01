@@ -310,7 +310,7 @@ class MainWindow(urwid.WidgetWrap):
             ])
             process.append([
                 node.process['percent'],
-                100.0 * node.cpus,
+                100.0,
                 node.name,
             ])
             heap.append([
