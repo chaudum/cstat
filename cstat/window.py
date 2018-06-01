@@ -360,16 +360,14 @@ class MainWindow(urwid.WidgetWrap):
 
     def calculate_disk_usage(self, data):
         fs = [0, 0]
-        for disk in self._data_disks(data):
-            fs[0] += disk['used']
-            fs[1] += disk['size']
+        fs[0] += data['total']['used']
+        fs[1] += data['total']['size']
         return fs
 
     def calculate_disk_io(self, data):
         io = dict(tx=0, rx=0)
-        for disk in self._data_disks(data):
-            io['tx'] += disk['bytes_written']
-            io['rx'] += disk['bytes_read']
+        io['tx'] += data['total']['bytes_written']
+        io['rx'] += data['total']['bytes_read']
         return io
 
     def update_settings(self, settings):
