@@ -12,22 +12,26 @@ clusters.
    :scale: 100%
    :alt: Screenshot of cstat in action
 
+Requirements
+============
+
+``cstat`` requires **Python >= 3.6** and can connect to **CrateDB >= 2.3**.
+
 Installation
 ============
 
-Right now, ``stat`` is only available from Github_. Therefore you need to
-checkout the repository and run ``pip install`` on the local directory.
+``cstat`` is available from Pypi_ so you can install it using pip_.
 
 ::
 
-    git clone https://github.com/chaudum/crate-top.git cstat
-    cd cstat
-    python3.4 -m venv env
-    source ./env/bin/activate
-    pip install -e .
+    pip install cstat
 
-``cstat`` requires **Python 3.6** or greater and can connect to **CrateDB
-2.x**.
+If you want to get the latest features and fixes, you can also install it
+directly from Github_.
+
+::
+
+    pip install git+https://github.com/chaudum/crate-top.git@master
 
 Usage
 =====
@@ -93,5 +97,7 @@ Todo
 .. _iostat: http://linux.die.net/man/1/iostat
 .. _CrateDB: https://crate.io
 .. _aiopg: https://github.com/aio-libs/aiopg
+.. _Pypi: https://pypi.org/project/cstat/
+.. _pip: https://pypi.org/project/pip/
 .. _Github: https://github.com/chaudum/crate-top
 .. _jobs_log: https://crate.io/docs/reference/en/latest/configuration.html#collecting-stats
