@@ -5,16 +5,21 @@ Changelog for cstat
 Unreleased
 ==========
 
-- Updated process CPU usage calculation to work with CrateDB 2.3 and newer.
+0.3.0
+=====
 
-- Updated disk usage and disk i/o calculation to work with CrateDB 2.3 and
-  newer.
+Released on **2018/06/01** with the following changes:
+
+- Make cstat compatible with CrateDB version 2.3.0 and greater.
+
+  - Updated process CPU usage calculation to work with CrateDB 2.3 and newer.
+
+  - Updated disk usage and disk i/o calculation to work with CrateDB 2.3 and
+    newer.
 
 - Added ``-V`` (prompt for username) argument.
 
 - Added ``--password`` and ``-W`` (prompt for password) arguments.
-
-- Make cstat compatible with CrateDB version 2.3.0 and greater.
 
 0.2.0
 =====
